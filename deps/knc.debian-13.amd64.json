@@ -1,0 +1,108 @@
+{
+  "vmconfig": {
+    "version": "dev",
+    "kind": "knc",
+    "os": {
+      "name": "debian-13",
+      "arch": "amd64",
+      "image": {
+        "version": "20260413-2447",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260413-2447/debian-13-nocloud-amd64-20260413-2447.qcow2",
+        "type": "qcow2",
+        "digest": "sha512:da953ad63fb4d841460f3b38c691ea8b4799e5799b65076a0642807fa1afb7bb3b125f98fbd9152c5b4296d1ada9727a7f576596c12935e3aca7a0426be2262e"
+      }
+    },
+    "dependencies": {
+      "cni-plugins": {
+        "version": "1.9.1",
+        "url": "https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-amd64-v1.9.1.tgz",
+        "type": "tar.gz",
+        "digest": "sha256:b98f74a0f8522f0a83867178729c1aa70f2158f90c45a2ca8fa791db1c76b303"
+      },
+      "containerd": {
+        "version": "2.3.0",
+        "url": "https://github.com/containerd/containerd/releases/download/v2.3.0/containerd-2.3.0-linux-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:4cb83e7100a5e73fcb626207d0b5bcfd1294e26aeddfe075dcfb38f375c5f887"
+      },
+      "crictl": {
+        "version": "1.36.0",
+        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.36.0/crictl-v1.36.0-linux-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:83855e114566a8a8c44c548d515670f51de3a5e1da8b2effb59870e2f10c25a3"
+      },
+      "fluent-bit": {
+        "version": "5.0.3",
+        "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.0.3_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:496c3ab89e43f4c99371772cd781f0842ca0faebe03c8aad1331cce367de3d40"
+      },
+      "kube-apiserver": {
+        "version": "1.36.0",
+        "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kube-apiserver",
+        "type": "binary",
+        "digest": "sha256:8116b8f13d1c8bbbbba0599fff1a27959f2a13b6cbb18c4efad5f9777c0a839c"
+      },
+      "kube-controller-manager": {
+        "version": "1.36.0",
+        "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kube-controller-manager",
+        "type": "binary",
+        "digest": "sha256:b15888043ee37302ce8fef36af5ae2b8470b3eba22a034d3573479daff33f6f0"
+      },
+      "kube-scheduler": {
+        "version": "1.36.0",
+        "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kube-scheduler",
+        "type": "binary",
+        "digest": "sha256:0804ad35fb7b2fb11bb1f27b9cc3ab113b323fb5fc0e12e3b27fc4d6a7f43c54"
+      },
+      "kubectl": {
+        "version": "1.36.0",
+        "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubectl",
+        "type": "binary",
+        "digest": "sha256:123d8c8844f46b1244c547fffb3c17180c0c26dac9890589fe7e67763298748e"
+      },
+      "kubelet": {
+        "version": "1.36.0",
+        "url": "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubelet",
+        "type": "binary",
+        "digest": "sha256:d857082946c28493e8fdc52227feabd962e0e0900b6c6e4f6510168043b79dd4"
+      },
+      "libpq5": {
+        "version": "17.9-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.9-0+deb13u1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:0f35933f3ba23b0dd37b486849a49975d03aede03eeba7bbf715b090eb7e1fc7"
+      },
+      "libsubid5": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/libsubid5_4.17.4-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:4d4faef8143c117a055a9041a7e99f8ba014c420a9b6e2fef5c693482581a204"
+      },
+      "registry": {
+        "version": "3.1.0",
+        "url": "https://github.com/distribution/distribution/releases/download/v3.1.0/registry_3.1.0_linux_amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:c69f2b8778c5357a77f6b41730d94d5f0b2b7cf54534040a06af5f0a70a731b2"
+      },
+      "runc": {
+        "version": "1.4.2",
+        "url": "https://github.com/opencontainers/runc/releases/download/v1.4.2/runc.amd64",
+        "type": "binary",
+        "digest": "sha256:ac8a90f9e225bb9322189937b230cdc5478d5753f0e31e1bda98a5cf06bd9539"
+      },
+      "uidmap": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/uidmap_4.17.4-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:a017182d42a32ca241cd830a59153488e1f65ae6e31a760014575878044a9d2d"
+      },
+      "vmconfig": {
+        "version": "dev",
+        "url": "",
+        "type": "tar.gz",
+        "digest": ""
+      }
+    }
+  }
+}
