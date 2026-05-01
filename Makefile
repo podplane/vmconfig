@@ -71,6 +71,12 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 	  echo "  Debian/Ubuntu: apt install shellcheck"; \
 	  exit 1; \
 	}
+	@command -v jq >/dev/null 2>&1 || { \
+	  echo "Error: 'jq' not found in PATH"; \
+	  echo "  macOS:         brew install jq"; \
+	  echo "  Debian/Ubuntu: apt install jq"; \
+	  exit 1; \
+	}
 	@echo "All required tools present."
 	@if [ -d .git ]; then \
 	  cp scripts/git-hooks/pre-commit .git/hooks/pre-commit; \
@@ -137,8 +143,10 @@ build-knc: setup ## Build ./dist/knc from ./templates/{knd,knc} (knc overlays kn
 # vmconfig_<VERSION>_<kind>_<os>_<arch>.tar.gz
 #
 # Each package recipe tars two sources together:
-#   1. dist/<kind>/   					- the arch-agnostic build tree
-#   2. deps/<kind>.<os>.<arch>.json.    - the arch-specific deps manifest
+#   1. dist/<kind>/                       - the arch-agnostic build tree
+#   2. dist/deps/<kind>.<os>.<arch>.json  - the arch-specific deps manifest,
+#                                           staged from deps/ with $(VERSION)
+#                                           baked in
 #
 # The second source is renamed in-archive to /opt/podplane/share/deps.json
 # via --transform, so the tarball ships exactly one deps.json regardless
@@ -151,35 +159,47 @@ package-knd: package-knd-amd64 package-knd-arm64 ## Package both knd arch tarbal
 package-knc: package-knc-amd64 package-knc-arm64 ## Package both knc arch tarballs
 
 package-knd-amd64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_amd64.tar.gz
+	@mkdir -p $(DIST_DIR)/deps
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
+	  deps/knd.$(OS_NAME).amd64.json > $(DIST_DIR)/deps/knd.$(OS_NAME).amd64.json
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^deps/knd\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz \
 	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR) deps/knd.$(OS_NAME).amd64.json
+	  -C $(CURDIR)/$(DIST_DIR)/deps knd.$(OS_NAME).amd64.json
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz"
 
 package-knd-arm64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_arm64.tar.gz
+	@mkdir -p $(DIST_DIR)/deps
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
+	  deps/knd.$(OS_NAME).arm64.json > $(DIST_DIR)/deps/knd.$(OS_NAME).arm64.json
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^deps/knd\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz \
 	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR) deps/knd.$(OS_NAME).arm64.json
+	  -C $(CURDIR)/$(DIST_DIR)/deps knd.$(OS_NAME).arm64.json
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz"
 
 package-knc-amd64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_amd64.tar.gz
+	@mkdir -p $(DIST_DIR)/deps
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
+	  deps/knc.$(OS_NAME).amd64.json > $(DIST_DIR)/deps/knc.$(OS_NAME).amd64.json
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^deps/knc\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz \
 	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR) deps/knc.$(OS_NAME).amd64.json
+	  -C $(CURDIR)/$(DIST_DIR)/deps knc.$(OS_NAME).amd64.json
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz"
 
 package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.tar.gz
+	@mkdir -p $(DIST_DIR)/deps
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
+	  deps/knc.$(OS_NAME).arm64.json > $(DIST_DIR)/deps/knc.$(OS_NAME).arm64.json
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^deps/knc\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz \
 	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR) deps/knc.$(OS_NAME).arm64.json
+	  -C $(CURDIR)/$(DIST_DIR)/deps knc.$(OS_NAME).arm64.json
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz"
 
 clean: ## Remove the temp/ and dist/ directories

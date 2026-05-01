@@ -1,0 +1,118 @@
+# Podplane <https://podplane.dev>
+# Copyright 2026 Nadrama Pty Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
+# Release workflow: builds + publishes vmconfig artifacts on tag push.
+#
+# For tag vX.Y.Z (or vX.Y.Z-rcN for pre-releases), this:
+#   1. Builds the four arch/kind tarballs via `make package VERSION=X.Y.Z`.
+#      The Makefile bakes the version into each tarball's embedded
+#      /opt/podplane/share/deps.json.
+#   2. Generates four standalone deps manifests under dist/release/ that
+#      additionally contain a .vmconfig.dependencies.vmconfig entry with
+#      the URL + sha256 digest of the matching tarball — the self-reference
+#      VMs need to fetch + verify vmconfig.tar.gz before extraction.
+#   3. Writes vmconfig_<VERSION>_checksums.txt (sha512) covering all
+#      eight artifacts and signs it keyless with cosign (Fulcio + Rekor
+#      via GitHub OIDC), producing a single self-contained sigstore bundle
+#      named vmconfig_<VERSION>_checksums.txt.sigstore.json.
+#   4. Creates a GitHub Release with auto-generated notes and uploads:
+#         - 4 tarballs
+#         - 4 standalone .deps.json manifests
+#         - vmconfig_<VERSION>_checksums.txt
+#         - vmconfig_<VERSION>_checksums.txt.sigstore.json
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # create releases + upload assets
+  id-token: write   # cosign keyless OIDC
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Derive VERSION and pre-release flag
+        id: meta
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        run: make lint
+
+      - name: Build & package
+        run: make package VERSION=${{ steps.meta.outputs.version }}
+
+      - name: Generate standalone deps manifests (with tarball URL + digest)
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for kind in knd knc; do
+            for arch in amd64 arm64; do
+              tarball="vmconfig_${VERSION}_${kind}_debian-13_${arch}.tar.gz"
+              digest="sha256:$(sha256sum "dist/${tarball}" | awk '{print $1}')"
+              url="https://github.com/${REPO}/releases/download/v${VERSION}/${tarball}"
+              jq \
+                --arg url "$url" \
+                --arg digest "$digest" \
+                '.vmconfig.dependencies.vmconfig.url = $url
+                 | .vmconfig.dependencies.vmconfig.digest = $digest' \
+                "dist/deps/${kind}.debian-13.${arch}.json" \
+                > "dist/vmconfig_${VERSION}_${kind}_debian-13_${arch}.deps.json"
+            done
+          done
+
+      - name: Generate checksums file (sha512)
+        working-directory: dist
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          sha512sum vmconfig_*.tar.gz vmconfig_*.deps.json \
+            | sort -k2 > "vmconfig_${VERSION}_checksums.txt"
+          cat "vmconfig_${VERSION}_checksums.txt"
+
+      - name: Sign checksums file with cosign (keyless, sigstore bundle)
+        working-directory: dist
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          cosign sign-blob \
+            --yes \
+            --bundle="vmconfig_${VERSION}_checksums.txt.sigstore.json" \
+            "vmconfig_${VERSION}_checksums.txt"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/vmconfig_*.tar.gz
+            dist/vmconfig_*.deps.json
+            dist/vmconfig_*_checksums.txt
+            dist/vmconfig_*_checksums.txt.sigstore.json
+          generate_release_notes: true
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          fail_on_unmatched_files: true
