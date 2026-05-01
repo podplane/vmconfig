@@ -37,10 +37,17 @@ TAR_FLAGS   := --owner=0 --group=0 --sort=name --mtime='UTC 2020-01-01' \
                --exclude='.DS_Store' --use-compress-program='gzip -n'
 RSYNC_FLAGS := -a
 
+# Host architecture, normalised to the same {amd64,arm64} vocabulary used by
+# the package targets. Used by the test-install targets below to pick the
+# matching deps manifest and pre-built package tarball for the local docker
+# engine's native platform.
+HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
+
 .PHONY: help setup lint precommit update-deps update-trust \
         build build-knd build-knc \
         package package-knd package-knc \
         package-knd-amd64 package-knd-arm64 package-knc-amd64 package-knc-arm64 \
+        test-install test-install-knd test-install-knc \
         clean
 
 help: ## Show this help message
@@ -126,14 +133,19 @@ build-knd: setup ## Build ./dist/knd from ./templates/knd
 	mkdir -p $(DIST_DIR)/knd
 	rsync $(RSYNC_FLAGS) templates/knd/ $(DIST_DIR)/knd/
 	mkdir -p $(DIST_DIR)/knd/opt/podplane/share
+	# note: install.sh file perms check and tar diff depend on this
+	chmod 0755 $(DIST_DIR)/knd/opt/podplane/bin/*.sh
 
 build-knc: setup ## Build ./dist/knc from ./templates/{knd,knc} (knc overlays knd)
 	@mkdir -p $(DIST_DIR)
 	rm -rf $(DIST_DIR)/knc
 	mkdir -p $(DIST_DIR)/knc
 	rsync $(RSYNC_FLAGS) templates/knd/ $(DIST_DIR)/knc/
+	mkdir -p templates/knc
 	rsync $(RSYNC_FLAGS) templates/knc/ $(DIST_DIR)/knc/
 	mkdir -p $(DIST_DIR)/knc/opt/podplane/share
+	# note: install.sh file perms check and tar diff depend on this
+	chmod 0755 $(DIST_DIR)/knc/opt/podplane/bin/*.sh
 
 # ---------------------------------------------------------------------------
 # Package targets
@@ -201,6 +213,34 @@ package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.t
 	  -C $(DIST_DIR)/knc . \
 	  -C $(CURDIR)/$(DIST_DIR)/deps knc.$(OS_NAME).arm64.json
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz"
+
+# ---------------------------------------------------------------------------
+# Test targets
+# ---------------------------------------------------------------------------
+#
+# Container-based smoke test for /opt/podplane/bin/install.sh (which itself
+# transitively exercises permissions.sh). Runs the script inside a vanilla
+# debian:13-slim container against the locally-built package tarball and a
+# host-side cache of the dep artifacts. configure.sh is intentionally NOT
+# tested here — it requires systemd / Docker-in-Docker and belongs in a
+# separate VM-level harness (we use our Podplane CLI for that!)
+#
+# The host-side dep cache lives at temp/deps-cache/<kind>/<os>/<arch>/ and
+# is mounted read-only into the container at /var/cache/vmconfig-deps. The
+# container entrypoint copies it into /opt/podplane/deps so install.sh's
+# rm -rf at the end cannot touch the host cache.
+
+test-install: test-install-knd test-install-knc ## Run install.sh test for both kinds
+
+test-install-knd: package-knd-$(HOST_ARCH) ## Run install.sh in a debian container for knd
+	@mkdir -p $(TEMP_DIR)
+	@rm -f $(TEMP_DIR)/test-install-knd.log
+	scripts/test-install/run.sh knd 2>&1 | tee $(TEMP_DIR)/test-install-knd.log
+
+test-install-knc: package-knc-$(HOST_ARCH) ## Run install.sh in a debian container for knc
+	@mkdir -p $(TEMP_DIR)
+	@rm -f $(TEMP_DIR)/test-install-knc.log
+	scripts/test-install/run.sh knc 2>&1 | tee $(TEMP_DIR)/test-install-knc.log
 
 clean: ## Remove the temp/ and dist/ directories
 	rm -rf $(TEMP_DIR) $(DIST_DIR)
