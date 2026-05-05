@@ -42,7 +42,7 @@ var sources = Sources{
 		Release:       debianRelease,
 		Name:          "debian-13",
 		BaseURL:       "https://cloud.debian.org/images/cloud/" + debianRelease,
-		ImageBasename: "debian-13-nocloud",
+		ImageBasename: "debian-13-genericcloud",
 	},
 	Dependencies: map[string]DownloadGroup{
 		"kubernetes": {

@@ -7,21 +7,21 @@
       "arch": "arm64",
       "image": {
         "version": "20260501-2465",
-        "url": "https://cloud.debian.org/images/cloud/trixie/20260501-2465/debian-13-nocloud-arm64-20260501-2465.qcow2",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260501-2465/debian-13-genericcloud-arm64-20260501-2465.qcow2",
         "type": "qcow2",
-        "digest": "sha512:3cebc741b40167b435c0b33dd67dbbc5c487d1d0aba7ac050e0169135b6898c5c30142dc87a0dd3f35d31bab2f8d15b9a9b2959d2f19274d83bbf8302346b09e"
+        "digest": "sha512:b75911ec0e820aab8667a12ea44a50d2a65fc62e0d141905364ac855312534d76392c84e295692cae4e6d4a998d653df22f54cccb8dc923fab9bf01d7aa10838"
       },
       "boot": {
-        "cmdline": "root=PARTUUID=27ea710e-9da4-4dcd-b856-ad8a3c60c395 ro",
+        "cmdline": "root=PARTUUID=e23b7a93-d2f0-43b3-9333-f7dc00a8d38a ro",
         "kernel": {
           "partition": 1,
-          "path": "/boot/vmlinuz-6.12.85+deb13-arm64",
-          "digest": "sha256:e9f257ab255b40ec46f529a8660a4baa496fb4c4b49af206099427abbb3b9b4e"
+          "path": "/boot/vmlinuz-6.12.85+deb13-cloud-arm64",
+          "digest": "sha256:f0b3391fd1ee35e210cef62789d6d1fc269bdf806b7b8fa655df2cfe791a501f"
         },
         "initrd": {
           "partition": 1,
-          "path": "/boot/initrd.img-6.12.85+deb13-arm64",
-          "digest": "sha256:5159830f33c41593a10f5fc72a49e10650724015ba251df34a217d054fb93ffa"
+          "path": "/boot/initrd.img-6.12.85+deb13-cloud-arm64",
+          "digest": "sha256:13a500f21f9d3b7022cbe96a5055daa0154aea80f27ab56d24eac1960b5af3f2"
         }
       }
     },
