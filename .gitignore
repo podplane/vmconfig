@@ -1,3 +1,4 @@
 temp/
 dist/
+cache/
 .DS_Store

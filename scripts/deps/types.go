@@ -151,6 +151,22 @@ type Sources struct {
 
 // ----- manifest (output) -----
 
+// BootFile describes the location and integrity of a boot artifact (kernel
+// or initrd) within the OS image's filesystem.
+type BootFile struct {
+	Partition int    `json:"partition"`
+	Path      string `json:"path"`
+	Digest    string `json:"digest"`
+}
+
+// Boot holds direct-boot metadata extracted from the OS image. The CLI uses
+// this to launch QEMU with -kernel/-initrd/-append, bypassing firmware/GRUB.
+type Boot struct {
+	Cmdline string   `json:"cmdline"`
+	Kernel  BootFile `json:"kernel"`
+	Initrd  BootFile `json:"initrd"`
+}
+
 // OsImage is the resolved OS image entry written to vmconfig.os.image.
 type OsImage struct {
 	Version string  `json:"version"`
@@ -181,6 +197,7 @@ type ManifestOS struct {
 	Name  string   `json:"name"`
 	Arch  string   `json:"arch"`
 	Image *OsImage `json:"image,omitempty"`
+	Boot  *Boot    `json:"boot,omitempty"`
 }
 
 // ManifestVMConfig is the `vmconfig` object.

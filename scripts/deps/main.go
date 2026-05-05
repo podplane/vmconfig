@@ -29,24 +29,31 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"hash"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/diskfs/go-diskfs"
 )
 
 var (
 	depsDir  = flag.String("deps-dir", "./deps", "Directory holding the manifest files (vmconfig/deps).")
 	trustDir = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
+	cacheDir = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
 )
 
 // ----- generic helpers -----
@@ -144,28 +151,6 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 	return n, err
 }
 
-func fetchBytes(url, label string) ([]byte, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to fetch %s: %s", url, res.Status)
-	}
-	if res.ContentLength <= 0 || res.ContentLength < progressThreshold {
-		return io.ReadAll(res.Body)
-	}
-	pr := &progressReader{
-		r:       res.Body,
-		total:   res.ContentLength,
-		label:   label,
-		start:   time.Now(),
-		lastLog: time.Now(),
-	}
-	return io.ReadAll(pr)
-}
-
 func renderTemplate(tmpl string, arch, version, file string) string {
 	r := strings.NewReplacer(
 		"$ARCH", arch,
@@ -180,9 +165,145 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func digestHash(algo string) (hash.Hash, error) {
+	switch algo {
+	case "sha256":
+		return sha256.New(), nil
+	case "sha512":
+		return sha512.New(), nil
+	default:
+		return nil, fmt.Errorf("unsupported digest algorithm %q", algo)
+	}
+}
+
+func splitDigest(digest string) (algo, hexDigest string, err error) {
+	algo, hexDigest, ok := strings.Cut(strings.ToLower(strings.TrimSpace(digest)), ":")
+	if !ok || algo == "" || hexDigest == "" {
+		return "", "", fmt.Errorf("invalid digest %q; expected <algo>:<hex>", digest)
+	}
+	if _, err := digestHash(algo); err != nil {
+		return "", "", err
+	}
+	return algo, hexDigest, nil
+}
+
+func fileDigest(path, expectedDigest string) (string, error) {
+	algo, _, err := splitDigest(expectedDigest)
+	if err != nil {
+		return "", err
+	}
+	h, err := digestHash(algo)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("hash %s: %w", path, err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func cachedDownload(urlString, label, arch, name, expectedDigest string) (string, error) {
+	algo, hexDigest, err := splitDigest(expectedDigest)
+	if err != nil {
+		return "", err
+	}
+	ext := cacheFileExt(urlString)
+	dir := filepath.Join(*cacheDir, arch, name)
+	cachePath := filepath.Join(dir, fmt.Sprintf("%s-%s%s", algo, hexDigest, ext))
+
+	if got, err := fileDigest(cachePath, expectedDigest); err == nil {
+		if got == hexDigest {
+			fmt.Printf("[%s]   using cached %s: %s\n", arch, name, cachePath)
+			return cachePath, nil
+		}
+		fmt.Printf("[%s]   replacing cached %s: digest mismatch\n", arch, name)
+		if err := os.Remove(cachePath); err != nil {
+			return "", fmt.Errorf("remove invalid cache file %s: %w", cachePath, err)
+		}
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	tmp, err := os.CreateTemp(dir, ".download-*")
+	if err != nil {
+		return "", err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	res, err := http.Get(urlString)
+	if err != nil {
+		tmp.Close()
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		tmp.Close()
+		return "", fmt.Errorf("failed to fetch %s: %s", urlString, res.Status)
+	}
+
+	h, err := digestHash(algo)
+	if err != nil {
+		tmp.Close()
+		return "", err
+	}
+	r := io.Reader(res.Body)
+	if res.ContentLength <= 0 || res.ContentLength >= progressThreshold {
+		r = &progressReader{
+			r:       res.Body,
+			total:   res.ContentLength,
+			label:   label,
+			start:   time.Now(),
+			lastLog: time.Now(),
+		}
+	}
+	if _, err := io.Copy(io.MultiWriter(tmp, h), r); err != nil {
+		tmp.Close()
+		return "", fmt.Errorf("download %s: %w", urlString, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+
+	got := hex.EncodeToString(h.Sum(nil))
+	if got != hexDigest {
+		return "", fmt.Errorf("download digest mismatch for %s: expected %s, got %s", urlString, hexDigest, got)
+	}
+	if err := os.Rename(tmpPath, cachePath); err != nil {
+		return "", err
+	}
+	return cachePath, nil
+}
+
+func cacheFileExt(urlString string) string {
+	name := urlString
+	if u, err := url.Parse(urlString); err == nil {
+		name = path.Base(u.Path)
+	} else {
+		name = strings.Split(name, "?")[0]
+		name = strings.TrimRight(name, "/")
+		name = name[strings.LastIndex(name, "/")+1:]
+	}
+	for _, ext := range []string{".tar.gz", ".qcow2", ".tgz", ".deb", ".zip", ".gz"} {
+		if strings.HasSuffix(name, ext) {
+			return ext
+		}
+	}
+	return filepath.Ext(name)
+}
+
 var installHints = map[string]string{
-	"gpg":    "macOS: `brew install gnupg`  •  Debian/Ubuntu: `apt install gnupg`",
-	"cosign": "macOS: `brew install cosign`  •  Debian/Ubuntu: see https://docs.sigstore.dev/cosign/system_config/installation/",
+	"gpg":      "macOS: `brew install gnupg`  •  Debian/Ubuntu: `apt install gnupg`",
+	"cosign":   "macOS: `brew install cosign`  •  Debian/Ubuntu: see https://docs.sigstore.dev/cosign/system_config/installation/",
+	"qemu-img": "macOS: `brew install qemu`  •  Debian/Ubuntu: `apt install qemu-utils`",
 }
 
 func requireCommands(cmds ...string) error {
@@ -696,6 +817,205 @@ func ensureBaseFile(kind, arch string) error {
 
 // ----- main flow -----
 
+// ----- OS boot metadata (qcow2/ext4 extraction) -----
+
+// processOsBoot inspects the OS qcow2 image to extract boot metadata
+// (kernel path, initrd path, cmdline, digests). It reuses a verified cached
+// qcow2 image, converts it to raw with qemu-img, and uses go-diskfs for
+// partition/filesystem access.
+//
+// The extracted metadata is written into the manifest's os.boot field.
+func processOsBoot() error {
+	for _, arch := range Archs {
+		// Check if any manifest for this arch is missing boot metadata.
+		needArch := false
+		for _, kind := range allKinds {
+			m, err := readManifest(kind, arch)
+			if err != nil {
+				return err
+			}
+			if m.VMConfig.OS.Image != nil && m.VMConfig.OS.Boot == nil {
+				needArch = true
+				break
+			}
+		}
+		if !needArch {
+			continue
+		}
+
+		// Read image URL from any manifest (same for all kinds).
+		m, err := readManifest(allKinds[0], arch)
+		if err != nil {
+			return err
+		}
+		if m.VMConfig.OS.Image == nil {
+			continue
+		}
+		imageURL := m.VMConfig.OS.Image.URL
+		imagePath, err := cachedDownload(
+			imageURL,
+			fmt.Sprintf("os-image/%s", arch),
+			arch,
+			"os-image",
+			m.VMConfig.OS.Image.Digest,
+		)
+		if err != nil {
+			return fmt.Errorf("cache OS image for boot inspection: %w", err)
+		}
+
+		boot, err := extractBootMetadata(imagePath, arch)
+		if err != nil {
+			return fmt.Errorf("extract boot metadata for %s: %w", arch, err)
+		}
+
+		// Write boot metadata into all kind manifests for this arch.
+		for _, kind := range allKinds {
+			m, err := readManifest(kind, arch)
+			if err != nil {
+				return err
+			}
+			if m.VMConfig.OS.Boot != nil {
+				continue
+			}
+			m.VMConfig.OS.Boot = boot
+			if err := writeManifest(kind, arch, m); err != nil {
+				return err
+			}
+			fmt.Printf("[%s/%s]   + os.boot (kernel=%s)\n", kind, arch, boot.Kernel.Path)
+		}
+	}
+	return nil
+}
+
+// extractBootMetadata converts a qcow2 image to raw using qemu-img, then
+// opens it with go-diskfs to locate grub.cfg, parse the default boot entry,
+// and hash the kernel/initrd files.
+func extractBootMetadata(imagePath, arch string) (*Boot, error) {
+	// Convert qcow2 to raw for go-diskfs (which requires a raw disk image).
+	rawPath := imagePath + ".raw"
+	fmt.Printf("  converting qcow2 → raw...\n")
+	cmd := exec.Command("qemu-img", "convert", "-f", "qcow2", "-O", "raw", imagePath, rawPath)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("qemu-img convert: %v\n%s", err, stderr.String())
+	}
+	defer os.Remove(rawPath)
+
+	// Open the raw disk image.
+	disk, err := diskfs.Open(rawPath, diskfs.WithSectorSize(512))
+	if err != nil {
+		return nil, fmt.Errorf("open disk: %w", err)
+	}
+
+	// Get the partition table.
+	pt, err := disk.GetPartitionTable()
+	if err != nil {
+		return nil, fmt.Errorf("read partition table: %w", err)
+	}
+	partitions := pt.GetPartitions()
+	if len(partitions) == 0 {
+		return nil, fmt.Errorf("no partitions found")
+	}
+
+	// Debian nocloud images have partition 1 as the root ext4 filesystem.
+	const rootPartNum = 1
+	fs, err := disk.GetFilesystem(rootPartNum)
+	if err != nil {
+		return nil, fmt.Errorf("get filesystem on partition %d: %w", rootPartNum, err)
+	}
+
+	// Read grub.cfg.
+	fmt.Printf("  reading /boot/grub/grub.cfg...\n")
+	grubFile, err := fs.OpenFile("/boot/grub/grub.cfg", os.O_RDONLY)
+	if err != nil {
+		return nil, fmt.Errorf("open grub.cfg: %w", err)
+	}
+	grubData, err := io.ReadAll(grubFile)
+	if err != nil {
+		return nil, fmt.Errorf("read grub.cfg: %w", err)
+	}
+
+	// Parse the default boot entry.
+	kernel, initrd, cmdline, err := parseGrubCfg(string(grubData))
+	if err != nil {
+		return nil, err
+	}
+
+	// Read and hash the kernel.
+	fmt.Printf("  hashing kernel: %s\n", kernel)
+	kernelFile, err := fs.OpenFile(kernel, os.O_RDONLY)
+	if err != nil {
+		return nil, fmt.Errorf("open kernel %s: %w", kernel, err)
+	}
+	kernelData, err := io.ReadAll(kernelFile)
+	if err != nil {
+		return nil, fmt.Errorf("read kernel %s: %w", kernel, err)
+	}
+
+	// Read and hash the initrd.
+	fmt.Printf("  hashing initrd: %s\n", initrd)
+	initrdFile, err := fs.OpenFile(initrd, os.O_RDONLY)
+	if err != nil {
+		return nil, fmt.Errorf("open initrd %s: %w", initrd, err)
+	}
+	initrdData, err := io.ReadAll(initrdFile)
+	if err != nil {
+		return nil, fmt.Errorf("read initrd %s: %w", initrd, err)
+	}
+
+	return &Boot{
+		Cmdline: cmdline,
+		Kernel: BootFile{
+			Partition: rootPartNum,
+			Path:      kernel,
+			Digest:    "sha256:" + sha256Hex(kernelData),
+		},
+		Initrd: BootFile{
+			Partition: rootPartNum,
+			Path:      initrd,
+			Digest:    "sha256:" + sha256Hex(initrdData),
+		},
+	}, nil
+}
+
+// parseGrubCfg extracts the kernel path, initrd path, and linux cmdline from
+// the first menuentry in a grub.cfg file.
+func parseGrubCfg(cfg string) (kernel, initrd, cmdline string, err error) {
+	lines := strings.Split(cfg, "\n")
+	inEntry := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "menuentry ") {
+			inEntry = true
+			continue
+		}
+		if !inEntry {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "linux") && !strings.HasPrefix(trimmed, "linuxefi") {
+			parts := strings.Fields(trimmed)
+			if len(parts) >= 2 {
+				kernel = parts[1]
+				cmdline = strings.Join(parts[2:], " ")
+			}
+		} else if strings.HasPrefix(trimmed, "initrd") {
+			parts := strings.Fields(trimmed)
+			if len(parts) >= 2 {
+				initrd = parts[1]
+			}
+		}
+		// Once we have both, stop at first entry.
+		if kernel != "" && initrd != "" {
+			break
+		}
+	}
+	if kernel == "" || initrd == "" {
+		return "", "", "", fmt.Errorf("could not find kernel/initrd in grub.cfg")
+	}
+	return kernel, initrd, cmdline, nil
+}
+
 func processOsImage() error {
 	// The OS image is identical across kinds for a given arch, so we resolve
 	// it once per arch and write it into every per-kind, per-arch manifest.
@@ -920,30 +1240,21 @@ func processGroup(groupName string, group DownloadGroup) error {
 			// entry to every kind that needs it; the artifact itself is
 			// kind-independent.
 			if group.CosignSigCert != nil || group.CosignBundle != nil {
-				tmpDir, err := os.MkdirTemp("", "vmconfig-artifact-")
+				fmt.Printf("[%s]   fetching %s for verification...\n", arch, file.Name)
+				artifactPath, err := cachedDownload(
+					url,
+					fmt.Sprintf("%s/%s", arch, file.Name),
+					arch,
+					file.Name,
+					group.HashAlg+":"+hash,
+				)
 				if err != nil {
 					return err
 				}
-				if err := func() error {
-					defer os.RemoveAll(tmpDir)
-					fmt.Printf("[%s]   fetching %s for verification...\n", arch, file.Name)
-					data, err := fetchBytes(url, fmt.Sprintf("%s/%s", arch, file.Name))
-					if err != nil {
-						return err
-					}
-					if got := sha256Hex(data); got != hash {
-						return fmt.Errorf("artifact sha256 mismatch for %s: expected %s, got %s",
-							url, hash, got)
-					}
-					artifactPath := filepath.Join(tmpDir, file.Name)
-					if err := os.WriteFile(artifactPath, data, 0o600); err != nil {
-						return err
-					}
-					fmt.Printf("[%s]   verifying cosign signature for %s...\n", arch, file.Name)
-					return cosignVerifyBlob(artifactPath, group, cosignCtx{
-						arch: arch, version: version, file: file.Name,
-					})
-				}(); err != nil {
+				fmt.Printf("[%s]   verifying cosign signature for %s...\n", arch, file.Name)
+				if err := cosignVerifyBlob(artifactPath, group, cosignCtx{
+					arch: arch, version: version, file: file.Name,
+				}); err != nil {
 					return err
 				}
 			}
@@ -975,16 +1286,18 @@ func processGroup(groupName string, group DownloadGroup) error {
 func run() error {
 	flag.Parse()
 
-	// Two external verifiers are needed:
-	//   - gpg     : verifies apt InRelease signatures against trust/*.asc
-	//               using a throwaway --homedir per verification (no side
-	//               effects on the user's ~/.gnupg).
-	//   - cosign  : verifies sigstore-signed GitHub release artifacts (e.g.
-	//               kubernetes binaries on dl.k8s.io and the containerd
-	//               release attestation bundle). Uses cosign's own
-	//               TUF-managed root.
-	// Fail fast with platform-specific install hints if either is missing.
-	if err := requireCommands("gpg", "cosign"); err != nil {
+	// Three external verifiers/tools are needed:
+	//   - gpg      : verifies apt InRelease signatures against trust/*.asc
+	//                using a throwaway --homedir per verification (no side
+	//                effects on the user's ~/.gnupg).
+	//   - cosign   : verifies sigstore-signed GitHub release artifacts (e.g.
+	//                kubernetes binaries on dl.k8s.io and the containerd
+	//                release attestation bundle). Uses cosign's own
+	//                TUF-managed root.
+	//   - qemu-img : converts qcow2 OS images to raw for boot metadata
+	//                extraction (kernel/initrd/cmdline).
+	// Fail fast with platform-specific install hints if any is missing.
+	if err := requireCommands("gpg", "cosign", "qemu-img"); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(*depsDir, 0o755); err != nil {
@@ -1002,6 +1315,11 @@ func run() error {
 
 	// Phase 2: OS image.
 	if err := processOsImage(); err != nil {
+		return err
+	}
+
+	// Phase 2b: OS boot metadata (kernel/initrd/cmdline for direct boot).
+	if err := processOsBoot(); err != nil {
 		return err
 	}
 
