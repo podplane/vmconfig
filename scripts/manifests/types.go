@@ -36,8 +36,9 @@ const (
 
 // FileEntry is one binary/.deb/tarball that a DownloadGroup produces.
 type FileEntry struct {
-	Name string
-	Kind []string
+	Name      string
+	Kind      []string
+	Providers []string
 }
 
 // AptSource describes how to fetch and verify an apt Packages index, and how
@@ -84,7 +85,7 @@ type CosignSigCert struct {
 	ExpectSubjectIsRegex bool
 }
 
-// CosignBundle is the sigstore bundle (`.sigstore.json` /
+// CosignBundle is the sigstore bundle (`.bundle` /
 // `*-attestation.intoto.jsonl`) cosign verification layout, where one
 // envelope signs every asset in the release (e.g. containerd's release
 // attestation).
@@ -114,7 +115,7 @@ type DownloadGroup struct {
 	// $ARCH / $VERSION / $FILE. When unset, the file is assumed to contain
 	// a single hash line.
 	HashFilename string
-	// Hash algorithm — currently always "sha256" for dependencies.
+	// Hash algorithm used for the manifest digest (e.g. "sha256" or "sha512").
 	HashAlg string
 	Type    DepType
 	// Apt source for verified-walk groups (libpq5, uidmap, libsubid5,
@@ -174,6 +175,7 @@ type OsImage struct {
 	Type    DepType `json:"type"`
 	// OCI-style digest: "<algo>:<hex>", e.g. "sha512:fa527f8a…".
 	Digest string `json:"digest"`
+	Size   int64  `json:"size"`
 }
 
 // DependencyOutput is one resolved entry under vmconfig.dependencies.
@@ -189,7 +191,10 @@ type DependencyOutput struct {
 	URL     string  `json:"url"`
 	Type    DepType `json:"type"`
 	// OCI-style digest: "<algo>:<hex>", e.g. "sha256:f622843…".
-	Digest string `json:"digest"`
+	Digest    string   `json:"digest"`
+	Size      int64    `json:"size"`
+	Providers []string `json:"providers,omitempty"`
+	Cached    bool     `json:"cached,omitempty"`
 }
 
 // ManifestOS is the `vmconfig.os` object.
@@ -211,7 +216,7 @@ type ManifestVMConfig struct {
 	Dependencies map[string]*DependencyOutput `json:"dependencies"`
 }
 
-// Manifest is the on-disk schema for vmconfig/deps/<os>.<arch>.json.
+// Manifest is the on-disk schema for vmconfig/manifests/<kind>.<os>.<arch>.json.
 type Manifest struct {
 	VMConfig ManifestVMConfig `json:"vmconfig"`
 }

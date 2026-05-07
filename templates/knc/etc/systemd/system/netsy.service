@@ -1,0 +1,17 @@
+[Unit]
+Description=Netsy Agent
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/crt/netsy.server.crt
+ConditionPathExists=/opt/key/netsy/netsy.server.key
+ConditionPathExists=/opt/crt/netsy.client.crt
+ConditionPathExists=/opt/key/netsy/netsy.client.key
+Wants=nstance-agent.service
+After=first-boot-env.service
+[Service]
+Type=exec
+Restart=always
+User=netsy
+Group=netsy
+ExecStart=/opt/netsy/bin/run-netsy.sh
+[Install]
+WantedBy=multi-user.target

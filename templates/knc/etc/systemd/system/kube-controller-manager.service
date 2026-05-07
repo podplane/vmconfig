@@ -1,0 +1,31 @@
+[Unit]
+Description=kube-controller-manager: The Kubernetes Controller Manager
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/crt/kube-controller-manager.client.crt
+ConditionPathExists=/opt/key/kube-controller-manager/kube-controller-manager.client.key
+Wants=kube-apiserver.service
+After=kube-apiserver.service
+[Service]
+Type=exec
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+User=kube-controller-manager
+Group=kube-controller-manager
+ExecStart=/usr/bin/kube-controller-manager \
+    --v=2 \
+    --kubeconfig=/opt/kube-controller-manager/etc/kubeconfig \
+    --bind-address=0.0.0.0 \
+    --cluster-name=kubernetes \
+    --root-ca-file=/opt/crt/ca.crt \
+    --client-ca-file=/opt/crt/ca.crt \
+    --cluster-cidr=100.64.0.0/10,fd64::/48 \
+    --allocate-node-cidrs=true \
+    --node-cidr-mask-size-ipv4=24 \
+    --node-cidr-mask-size-ipv6=64 \
+    --service-cluster-ip-range=198.18.0.0/15,fdc6::/108 \
+    --use-service-account-credentials=true \
+    --tls-min-version=VersionTLS13 \
+    --tls-cipher-suites=TLS_AES_256_GCM_SHA384
+[Install]
+WantedBy=multi-user.target

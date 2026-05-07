@@ -17,7 +17,7 @@
 //   - and what artifact type it is (binary, deb, tar.gz).
 //
 // main.go consumes `sources` and writes the resolved manifests to
-// vmconfig/deps/<kind>.<os>.<arch>.json (one file per kind, OS, and arch).
+// vmconfig/manifests/<kind>.<os>.<arch>.json (one file per kind, OS, and arch).
 //
 // Upstream signing coverage (last updated April 2026):
 //   - kubernetes  : per-binary cosign .sig/.cert on dl.k8s.io
@@ -25,10 +25,10 @@
 //   - runc        : GPG .asc per-file, maintainer keys — NO cosign artifacts.
 //     Falls back to TLS+sha256sum until upstream adopts cosign or
 //     we add the maintainer keys to vmconfig/trust/.
-//   - registry (distribution/distribution): ships unsigned `*.provenance.json`
-//     (plain in-toto Statement, no signature material) — NO cosign artifacts.
-//     TLS-only.
-//   - cri-tools, cni-plugins: no consistent upstream signature scheme. TLS-only.
+//   - zot: release checksums sidecar, no cosign artifacts. TLS-only.
+//   - netsy, nstance-agent: release checksum sidecars.
+//   - cri-tools, cni-plugins, kube2iam: no consistent upstream signature scheme.
+//     TLS-only where release artifacts are available.
 //   - debian cloud image: no detached signature published by Debian Cloud Team.
 //     TLS-only via cloud.debian.org HTTPS.
 
@@ -169,17 +169,32 @@ var sources = Sources{
 			Type:    DepTypeDeb,
 			Files:   []FileEntry{{Name: "fluent-bit", Kind: allKinds}},
 		},
-		// "registry" is the OCI/Docker registry binary published by the
-		// CNCF distribution/distribution project. We expose it under its
-		// upstream artifact name ("registry"); the word "distribution"
-		// appears only where the upstream repo path forces it.
-		"registry": {
-			Repo:    "distribution/distribution",
-			FileURL: "https://github.com/distribution/distribution/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz",
-			HashURL: "https://github.com/distribution/distribution/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz.sha256",
-			HashAlg: "sha256",
-			Type:    DepTypeTarGz,
-			Files:   []FileEntry{{Name: "registry", Kind: []string{KindKnc}}},
+		"netsy": {
+			Repo:         "netsy-dev/netsy",
+			FileURL:      "https://github.com/netsy-dev/netsy/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashURL:      "https://github.com/netsy-dev/netsy/releases/download/v$VERSION/netsy_$VERSION_checksums.txt",
+			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashAlg:      "sha512",
+			Type:         DepTypeTarGz,
+			Files:        []FileEntry{{Name: "netsy", Kind: []string{KindKnc}}},
+		},
+		"nstance-agent": {
+			Repo:         "nstance-dev/nstance",
+			FileURL:      "https://github.com/nstance-dev/nstance/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashURL:      "https://github.com/nstance-dev/nstance/releases/download/v$VERSION/nstance_$VERSION_checksums.txt",
+			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashAlg:      "sha512",
+			Type:         DepTypeTarGz,
+			Files:        []FileEntry{{Name: "nstance-agent", Kind: allKinds}},
+		},
+		"zot": {
+			Repo:         "project-zot/zot",
+			FileURL:      "https://github.com/project-zot/zot/releases/download/v$VERSION/$FILE-linux-$ARCH-minimal",
+			HashURL:      "https://github.com/project-zot/zot/releases/download/v$VERSION/checksums.sha256.txt",
+			HashFilename: "$FILE-linux-$ARCH-minimal",
+			HashAlg:      "sha256",
+			Type:         DepTypeBinary,
+			Files:        []FileEntry{{Name: "zot", Kind: allKinds}},
 		},
 	},
 }

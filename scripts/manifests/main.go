@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Generates vmconfig dependency manifests at
-// vmconfig/deps/<kind>.<os>.<arch>.json.
+// vmconfig/manifests/<kind>.<os>.<arch>.json.
 //
 // One file is produced per VM kind and CPU architecture. Each
 // manifest lists the OS image and every binary/package vmconfig needs for
@@ -43,6 +43,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -51,9 +52,9 @@ import (
 )
 
 var (
-	depsDir  = flag.String("deps-dir", "./deps", "Directory holding the manifest files (vmconfig/deps).")
-	trustDir = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
-	cacheDir = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
+	manifestsDir = flag.String("manifests-dir", "./manifests", "Directory holding the manifest files (vmconfig/manifests).")
+	trustDir     = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
+	cacheDir     = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
 )
 
 // ----- generic helpers -----
@@ -72,6 +73,21 @@ func fetchText(url string) (string, error) {
 		return "", fmt.Errorf("read %s: %w", url, err)
 	}
 	return string(body), nil
+}
+
+func remoteFileSize(urlString string) (int64, error) {
+	res, err := http.Head(urlString)
+	if err != nil {
+		return 0, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("failed to inspect %s: %s", urlString, res.Status)
+	}
+	if res.ContentLength <= 0 {
+		return 0, fmt.Errorf("missing content length for %s", urlString)
+	}
+	return res.ContentLength, nil
 }
 
 // fetchTextMaybeGzipped fetches a URL, verifies its sha256 against expected,
@@ -207,10 +223,10 @@ func fileDigest(path, expectedDigest string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func cachedDownload(urlString, label, arch, name, expectedDigest string) (string, error) {
+func cachedDownload(urlString, label, arch, name, expectedDigest string) (string, int64, error) {
 	algo, hexDigest, err := splitDigest(expectedDigest)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	ext := cacheFileExt(urlString)
 	dir := filepath.Join(*cacheDir, arch, name)
@@ -219,22 +235,26 @@ func cachedDownload(urlString, label, arch, name, expectedDigest string) (string
 	if got, err := fileDigest(cachePath, expectedDigest); err == nil {
 		if got == hexDigest {
 			fmt.Printf("[%s]   using cached %s: %s\n", arch, name, cachePath)
-			return cachePath, nil
+			info, statErr := os.Stat(cachePath)
+			if statErr != nil {
+				return "", 0, statErr
+			}
+			return cachePath, info.Size(), nil
 		}
 		fmt.Printf("[%s]   replacing cached %s: digest mismatch\n", arch, name)
 		if err := os.Remove(cachePath); err != nil {
-			return "", fmt.Errorf("remove invalid cache file %s: %w", cachePath, err)
+			return "", 0, fmt.Errorf("remove invalid cache file %s: %w", cachePath, err)
 		}
 	} else if !os.IsNotExist(err) {
-		return "", err
+		return "", 0, err
 	}
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
+		return "", 0, err
 	}
 	tmp, err := os.CreateTemp(dir, ".download-*")
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
@@ -242,18 +262,18 @@ func cachedDownload(urlString, label, arch, name, expectedDigest string) (string
 	res, err := http.Get(urlString)
 	if err != nil {
 		tmp.Close()
-		return "", err
+		return "", 0, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		tmp.Close()
-		return "", fmt.Errorf("failed to fetch %s: %s", urlString, res.Status)
+		return "", 0, fmt.Errorf("failed to fetch %s: %s", urlString, res.Status)
 	}
 
 	h, err := digestHash(algo)
 	if err != nil {
 		tmp.Close()
-		return "", err
+		return "", 0, err
 	}
 	r := io.Reader(res.Body)
 	if res.ContentLength <= 0 || res.ContentLength >= progressThreshold {
@@ -267,20 +287,24 @@ func cachedDownload(urlString, label, arch, name, expectedDigest string) (string
 	}
 	if _, err := io.Copy(io.MultiWriter(tmp, h), r); err != nil {
 		tmp.Close()
-		return "", fmt.Errorf("download %s: %w", urlString, err)
+		return "", 0, fmt.Errorf("download %s: %w", urlString, err)
 	}
 	if err := tmp.Close(); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	got := hex.EncodeToString(h.Sum(nil))
 	if got != hexDigest {
-		return "", fmt.Errorf("download digest mismatch for %s: expected %s, got %s", urlString, hexDigest, got)
+		return "", 0, fmt.Errorf("download digest mismatch for %s: expected %s, got %s", urlString, hexDigest, got)
 	}
 	if err := os.Rename(tmpPath, cachePath); err != nil {
-		return "", err
+		return "", 0, err
 	}
-	return cachePath, nil
+	info, err := os.Stat(cachePath)
+	if err != nil {
+		return "", 0, err
+	}
+	return cachePath, info.Size(), nil
 }
 
 func cacheFileExt(urlString string) string {
@@ -381,12 +405,17 @@ func fetchOsImage(arch string) (*OsImage, error) {
 	if hash == "" {
 		return nil, fmt.Errorf("could not find %s in %s", filename, hashURL)
 	}
+	size, err := remoteFileSize(fileURL)
+	if err != nil {
+		return nil, fmt.Errorf("inspect OS image size: %w", err)
+	}
 
 	return &OsImage{
 		Version: version,
 		URL:     fileURL,
 		Type:    DepTypeQcow2,
 		Digest:  "sha512:" + hash,
+		Size:    size,
 	}, nil
 }
 
@@ -742,7 +771,7 @@ func fetchFileHash(
 		want := renderTemplate(group.HashFilename, arch, version, file)
 		for _, line := range strings.Split(data, "\n") {
 			fields := strings.Fields(line)
-			if len(fields) >= 2 && fields[1] == want {
+			if len(fields) >= 2 && strings.TrimPrefix(fields[1], "*") == want {
 				return fields[0], nil
 			}
 		}
@@ -760,9 +789,9 @@ func fetchFileHash(
 // ----- manifest I/O -----
 
 func manifestPath(kind, arch string) string {
-	// Per kind/OS/arch layout: `deps/<kind>.<os-name>.<arch>.json`.
+	// Per kind/OS/arch layout: `manifests/<kind>.<os-name>.<arch>.json`.
 	// kind goes first so the published artifact filenames sort kind-grouped.
-	return filepath.Join(*depsDir, fmt.Sprintf("%s.%s.%s.json", kind, sources.OS.Name, arch))
+	return filepath.Join(*manifestsDir, fmt.Sprintf("%s.%s.%s.json", kind, sources.OS.Name, arch))
 }
 
 func readManifest(kind, arch string) (*Manifest, error) {
@@ -827,22 +856,6 @@ func ensureBaseFile(kind, arch string) error {
 // The extracted metadata is written into the manifest's os.boot field.
 func processOsBoot() error {
 	for _, arch := range Archs {
-		// Check if any manifest for this arch is missing boot metadata.
-		needArch := false
-		for _, kind := range allKinds {
-			m, err := readManifest(kind, arch)
-			if err != nil {
-				return err
-			}
-			if m.VMConfig.OS.Image != nil && m.VMConfig.OS.Boot == nil {
-				needArch = true
-				break
-			}
-		}
-		if !needArch {
-			continue
-		}
-
 		// Read image URL from any manifest (same for all kinds).
 		m, err := readManifest(allKinds[0], arch)
 		if err != nil {
@@ -852,7 +865,7 @@ func processOsBoot() error {
 			continue
 		}
 		imageURL := m.VMConfig.OS.Image.URL
-		imagePath, err := cachedDownload(
+		imagePath, _, err := cachedDownload(
 			imageURL,
 			fmt.Sprintf("os-image/%s", arch),
 			arch,
@@ -874,7 +887,7 @@ func processOsBoot() error {
 			if err != nil {
 				return err
 			}
-			if m.VMConfig.OS.Boot != nil {
+			if reflect.DeepEqual(m.VMConfig.OS.Boot, boot) {
 				continue
 			}
 			m.VMConfig.OS.Boot = boot
@@ -1027,7 +1040,7 @@ func processOsImage() error {
 			if err != nil {
 				return err
 			}
-			if m.VMConfig.OS.Image == nil {
+			if m.VMConfig.OS.Image == nil || m.VMConfig.OS.Image.Size <= 0 {
 				needArch = true
 				break
 			}
@@ -1052,7 +1065,7 @@ func processOsImage() error {
 			if err != nil {
 				return err
 			}
-			if m.VMConfig.OS.Image != nil {
+			if m.VMConfig.OS.Image != nil && m.VMConfig.OS.Image.Size > 0 {
 				continue
 			}
 			m.VMConfig.OS.Image = img
@@ -1099,6 +1112,7 @@ func processVMConfigStubs() error {
 				URL:     "",
 				Type:    DepTypeTarGz,
 				Digest:  "",
+				Size:    0,
 			}
 			if err := writeManifest(kind, arch, m); err != nil {
 				return err
@@ -1125,6 +1139,19 @@ func fileAppliesToKind(file FileEntry, kind string) bool {
 }
 
 func processGroup(groupName string, group DownloadGroup) error {
+	// For GitHub-released groups the version is the same across archs. Fetch it
+	// before deciding whether the group is already complete so existing manifest
+	// entries can be refreshed when upstream publishes a newer release.
+	var sharedVersion string
+	if group.Repo != "" && group.Apt == nil {
+		v, err := fetchRepoVersion(groupName, group.Repo)
+		if err != nil {
+			return err
+		}
+		sharedVersion = v
+	}
+	sharedManifestVersion := strings.TrimPrefix(sharedVersion, "v")
+
 	// For each kind/arch pair, figure out which files in this group are
 	// still missing from the manifest. We key the missing map on (kind,
 	// arch) so the resolution loop below can broadcast a single resolved
@@ -1156,7 +1183,9 @@ func processGroup(groupName string, group DownloadGroup) error {
 				if !fileAppliesToKind(file, kind) {
 					continue
 				}
-				if _, ok := manifests[ka{kind, arch}].VMConfig.Dependencies[file.Name]; ok {
+				if dep, ok := manifests[ka{kind, arch}].VMConfig.Dependencies[file.Name]; ok &&
+					dep.Size > 0 &&
+					(sharedVersion == "" || dep.Version == sharedManifestVersion) {
 					continue
 				}
 				archHasMissing[arch] = true
@@ -1178,16 +1207,10 @@ func processGroup(groupName string, group DownloadGroup) error {
 		return nil
 	}
 
-	// Resolve version. For GitHub-released groups the version is the same
-	// across archs and we fetch it once; for apt groups the version is
-	// per-arch (read from the per-arch Packages file).
-	var sharedVersion string
-	if group.Repo != "" && group.Apt == nil {
-		v, err := fetchRepoVersion(groupName, group.Repo)
-		if err != nil {
-			return err
-		}
-		sharedVersion = v
+	// Resolve version. For apt groups the version is per-arch (read from the
+	// per-arch Packages file). GitHub-backed groups use sharedVersion fetched
+	// above.
+	if sharedVersion != "" {
 		fmt.Printf("[%s] version=%s\n", groupName, sharedVersion)
 	}
 
@@ -1239,9 +1262,11 @@ func processGroup(groupName string, group DownloadGroup) error {
 			// We verify ONCE per (arch, file) and broadcast the resolved
 			// entry to every kind that needs it; the artifact itself is
 			// kind-independent.
+			var size int64
 			if group.CosignSigCert != nil || group.CosignBundle != nil {
 				fmt.Printf("[%s]   fetching %s for verification...\n", arch, file.Name)
-				artifactPath, err := cachedDownload(
+				var artifactPath string
+				artifactPath, size, err = cachedDownload(
 					url,
 					fmt.Sprintf("%s/%s", arch, file.Name),
 					arch,
@@ -1257,6 +1282,11 @@ func processGroup(groupName string, group DownloadGroup) error {
 				}); err != nil {
 					return err
 				}
+			} else {
+				size, err = remoteFileSize(url)
+				if err != nil {
+					return fmt.Errorf("inspect size for %s: %w", file.Name, err)
+				}
 			}
 
 			for _, kind := range allKinds {
@@ -1264,14 +1294,18 @@ func processGroup(groupName string, group DownloadGroup) error {
 					continue
 				}
 				m := manifests[ka{kind, arch}]
-				if _, ok := m.VMConfig.Dependencies[file.Name]; ok {
+				if dep, ok := m.VMConfig.Dependencies[file.Name]; ok &&
+					dep.Size > 0 &&
+					(sharedVersion == "" || dep.Version == sharedManifestVersion) {
 					continue
 				}
 				m.VMConfig.Dependencies[file.Name] = &DependencyOutput{
-					Version: strings.TrimPrefix(version, "v"),
-					URL:     url,
-					Type:    group.Type,
-					Digest:  group.HashAlg + ":" + hash,
+					Version:   strings.TrimPrefix(version, "v"),
+					URL:       url,
+					Type:      group.Type,
+					Digest:    group.HashAlg + ":" + hash,
+					Size:      size,
+					Providers: file.Providers,
 				}
 				if err := writeManifest(kind, arch, m); err != nil {
 					return err
@@ -1300,7 +1334,7 @@ func run() error {
 	if err := requireCommands("gpg", "cosign", "qemu-img"); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(*depsDir, 0o755); err != nil {
+	if err := os.MkdirAll(*manifestsDir, 0o755); err != nil {
 		return err
 	}
 

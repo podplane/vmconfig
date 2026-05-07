@@ -1,0 +1,151 @@
+{
+  "vmconfig": {
+    "version": "dev",
+    "kind": "knc",
+    "os": {
+      "name": "debian-13",
+      "arch": "arm64",
+      "image": {
+        "version": "20260512-2476",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260512-2476/debian-13-genericcloud-arm64-20260512-2476.qcow2",
+        "type": "qcow2",
+        "digest": "sha512:274c313ebe7923f86c4533a7c5d62a209ce793171f5d804eb6d9324c6004767d1ba0f43732d53af31ad7551bb801b8e022b3c5262a8676915bc97e9e5368110f",
+        "size": 335740928
+      },
+      "boot": {
+        "cmdline": "root=PARTUUID=cdb3ede1-12ec-4bf5-bfd0-037823082720 ro",
+        "kernel": {
+          "partition": 1,
+          "path": "/boot/vmlinuz-6.12.86+deb13-cloud-arm64",
+          "digest": "sha256:2e11533c88dfde3067f95129a947176bb9779e1dfeb66f44b55dd13a84ab7953"
+        },
+        "initrd": {
+          "partition": 1,
+          "path": "/boot/initrd.img-6.12.86+deb13-cloud-arm64",
+          "digest": "sha256:3837dfbd4dea4c47f7c502303b028f468a4105b6cf91a85742043750db010f30"
+        }
+      }
+    },
+    "dependencies": {
+      "cni-plugins": {
+        "version": "1.9.1",
+        "url": "https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-arm64-v1.9.1.tgz",
+        "type": "tar.gz",
+        "digest": "sha256:56171987d3947707c3563db2f4001bccaf50fd63468611b9f3cbecb1375ee7ec",
+        "size": 51330810
+      },
+      "containerd": {
+        "version": "2.3.1",
+        "url": "https://github.com/containerd/containerd/releases/download/v2.3.1/containerd-2.3.1-linux-arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:46a83603a850f3916ca7c942310daaf82ed17773a85b1d431e92d4a541e46d0d",
+        "size": 31275697
+      },
+      "crictl": {
+        "version": "1.36.0",
+        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.36.0/crictl-v1.36.0-linux-arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:68328594ccf780a80ae2b092d9f6ce484eec7cf540c275242e8fd954bfd95332",
+        "size": 17571251
+      },
+      "fluent-bit": {
+        "version": "5.0.5",
+        "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.0.5_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:276ac994957e11d01d0726ce4420597218a849d5691ebb0cfbd21af8961f8a20",
+        "size": 56527594
+      },
+      "kube-apiserver": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/arm64/kube-apiserver",
+        "type": "binary",
+        "digest": "sha256:4652cb7637891e9ca1c639802a3a4e7c658c6291fdaa8bcbd173b0d610a7b290",
+        "size": 81592482
+      },
+      "kube-controller-manager": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/arm64/kube-controller-manager",
+        "type": "binary",
+        "digest": "sha256:100b2da64ff32467334eab1c9c17eeab16588b7b7de30a3d4c5d8375c43634e4",
+        "size": 68681890
+      },
+      "kube-scheduler": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/arm64/kube-scheduler",
+        "type": "binary",
+        "digest": "sha256:0598118032b5b5780fb1c0f3b79f295ac706dcd4294d2963ca1ea9f388b50b73",
+        "size": 45875362
+      },
+      "kubectl": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/arm64/kubectl",
+        "type": "binary",
+        "digest": "sha256:59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7",
+        "size": 55640226
+      },
+      "kubelet": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/arm64/kubelet",
+        "type": "binary",
+        "digest": "sha256:bf274dd3affbf2543d20465dee1f763f668f78c6fbd56197794f81337a49d687",
+        "size": 55968009
+      },
+      "libpq5": {
+        "version": "17.9-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.9-0+deb13u1_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:4b66131c057cfb02051c5d5a8202920c51017b4f5c046bee7a8567c70528facf",
+        "size": 221760
+      },
+      "libsubid5": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/libsubid5_4.17.4-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:0cbd234e3e1afad8195cf12d87c7eb820a3e55b252e48da930cd9f0df3e787c1",
+        "size": 218504
+      },
+      "netsy": {
+        "version": "1.1.0",
+        "url": "https://github.com/netsy-dev/netsy/releases/download/v1.1.0/netsy_1.1.0_linux_arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:03bb4e435863dadc5d4f5802ceb0cf1d12072723d5d4b710164168133fb9e2a5377e5e4c94567861fe509e6db5db83008b6049f9a62f88f7fa038813bc3f2a08",
+        "size": 14110217
+      },
+      "nstance-agent": {
+        "version": "1.2.3",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.2.3/nstance-agent_1.2.3_linux_arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:6f3fb7f551167272d04b99fe7aa8f355a0a3772aafb1857348dca296242245e5ad62b78a1c7cad0f873d7c77c8990afb3d0c5ce28cb6f4c2af1a6a4795c0e71f",
+        "size": 5414840
+      },
+      "runc": {
+        "version": "1.4.2",
+        "url": "https://github.com/opencontainers/runc/releases/download/v1.4.2/runc.arm64",
+        "type": "binary",
+        "digest": "sha256:ea54032310588e115633aa2f4bba8bf9500257f657e1deca88df5778775138db",
+        "size": 11499552
+      },
+      "uidmap": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/uidmap_4.17.4-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:e06aab52f0586f6f0fabf1ab1b4f946e18796d1cea837201f11346a25dc3ce3c",
+        "size": 192832
+      },
+      "vmconfig": {
+        "version": "dev",
+        "url": "",
+        "type": "tar.gz",
+        "digest": "",
+        "size": 0
+      },
+      "zot": {
+        "version": "2.1.17",
+        "url": "https://github.com/project-zot/zot/releases/download/v2.1.17/zot-linux-arm64-minimal",
+        "type": "binary",
+        "digest": "sha256:f56af10ca56ef3c42b8a75f2648f2315f2480489d598bcfc79c215509615b24c",
+        "size": 73072942
+      }
+    }
+  }
+}

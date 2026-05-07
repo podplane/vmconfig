@@ -1,0 +1,15 @@
+[Unit]
+Description=Process nstance-agent receive output
+Documentation=man:systemd.service(5)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/podplane/bin/nstance-recv-watch.sh
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

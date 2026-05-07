@@ -1,0 +1,93 @@
+service:
+  # flush records every 1 second
+  flush: 1
+  # do not run as daemon since we're using systemd
+  daemon: false
+  # configure fluent-bit verbosity
+  log_level: info
+  # disable http server
+  http_server: false
+  # configure storage for state persistence
+  storage.path: /var/lib/fluent-bit # Persist state (e.g. journal cursor)
+  # do not capture metrics
+  storage.metrics: false
+
+pipeline:
+  inputs:
+    # BEGIN TELEMETRY_SYSTEMD_INPUT
+    # read journald logs from systemd services
+    - name: systemd
+      tag: systemd.*
+      systemd_filter:
+        - _SYSTEMD_UNIT=first-boot-env.service
+        - _SYSTEMD_UNIT=cron.service
+        - _SYSTEMD_UNIT=ssh.service
+        - _SYSTEMD_UNIT=netsy.service
+        - _SYSTEMD_UNIT=nstance-agent.service
+        - _SYSTEMD_UNIT=nstance-recv-watch.service
+        - _SYSTEMD_UNIT=containerd.service
+        - _SYSTEMD_UNIT=kube-apiserver.service
+        - _SYSTEMD_UNIT=kube-controller-manager.service
+        - _SYSTEMD_UNIT=kube-scheduler.service
+        - _SYSTEMD_UNIT=kubelet.service
+        - _SYSTEMD_UNIT=zot.service
+      read_from_tail: true
+    # END TELEMETRY_SYSTEMD_INPUT
+
+    # BEGIN TELEMETRY_LOG_CLOUDINIT_INPUT
+    # read cloud-init.log
+    - name: tail
+      tag: cloudinit.*
+      path: /var/log/cloud-init.log
+      read_from_head: true
+      refresh_interval: 30 # how often to check for file changes (seconds)
+    # END TELEMETRY_LOG_CLOUDINIT_INPUT
+
+  filters:
+    - name: modify
+      # format in OTLP (OTel Protocol)
+      match: "systemd.*"
+      Rename:
+        - _HOSTNAME host.name
+        - MESSAGE body
+        - SYSLOG_IDENTIFIER log.source
+      Add:
+        - log.format otlp
+    - name: modify
+      match: "cloudinit.*"
+      Rename:
+        - log body
+      Add:
+        - log.source cloud-init
+        - log.format otlp
+
+  outputs:
+    # BEGIN TELEMETRY_S3_OUTPUT
+    # send logs to S3 every 100M or 1 minute, whichever comes first
+    - name: s3
+      match: "*"
+      upload_timeout: 1m
+      total_file_size: 100M
+      # upload_timeout: 10s
+      # total_file_size: 1M
+      use_put_object: true
+      store_dir: /tmp/fluent-bit/s3
+      bucket: ${TELEMETRY_S3_BUCKET}
+      endpoint: ${TELEMETRY_S3_ENDPOINT}
+      region: ${TELEMETRY_S3_REGION}
+      compression: gzip
+      s3_key_format: /logs/%Y-%m-%d/%H/%H-%M-%S_$INDEX_$UUID.json.gz
+      json_date_key: date
+      json_date_format: iso8601
+      role_arn: ${TELEMETRY_S3_ASSUME_ROLE}
+    # END TELEMETRY_S3_OUTPUT
+
+    # BEGIN TELEMETRY_OTLP_OUTPUT
+    # send logs to an OpenTelemetry Protocol HTTP endpoint
+    - name: opentelemetry
+      match: "*"
+      host: ${TELEMETRY_OTLP_HOST}
+      port: ${TELEMETRY_OTLP_PORT}
+      logs_uri: ${TELEMETRY_OTLP_LOGS_URI}
+      tls: ${TELEMETRY_OTLP_TLS}
+    # END TELEMETRY_OTLP_OUTPUT

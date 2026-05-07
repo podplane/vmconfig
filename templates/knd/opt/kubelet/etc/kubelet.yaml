@@ -1,0 +1,51 @@
+# https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+contentType: "application/json"
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    enabled: false
+  x509:
+    clientCAFile: /opt/crt/ca.crt
+authorization:
+  mode: AlwaysAllow
+tlsCertFile: /opt/crt/kubelet.server.crt
+tlsPrivateKeyFile: /opt/key/kubelet/kubelet.server.key
+tlsMinVersion: "VersionTLS13"
+cgroupDriver: systemd
+containerRuntimeEndpoint: "unix:///var/run/containerd/containerd.sock"
+shutdownGracePeriod: 30s
+shutdownGracePeriodCriticalPods: 10s
+readOnlyPort: 0
+failCgroupV1: true
+serializeImagePulls: false
+registryPullQPS: 10
+registryBurst: 20
+resolvConf: /run/systemd/resolve/resolv.conf
+clusterDNS: ["198.19.255.254", "fdc6::ffff"]
+clusterDomain: "cluster.local"
+maxPods: 110
+kubeReserved:
+  cpu: "200m"
+  memory: "256Mi"
+systemReserved:
+  cpu: "200m"
+  memory: "256Mi"
+evictionHard:
+  memory.available: "50Mi"
+  nodefs.available: "5%"
+  nodefs.inodesFree: "2%"
+  imagefs.available: "5%"
+evictionSoft:
+  memory.available: "100Mi"
+  nodefs.available: "10%"
+  nodefs.inodesFree: "5%"
+  imagefs.available: "10%"
+evictionSoftGracePeriod:
+  memory.available: "30s"
+  nodefs.available: "30s"
+  nodefs.inodesFree: "30s"
+  imagefs.available: "30s"
+evictionPressureTransitionPeriod: "1m"

@@ -6,7 +6,7 @@
 //
 // Run this script only when an upstream rotates their signing key. The
 // ASCII-armored .asc files written here are committed to the repository and
-// consumed by scripts/deps (which dearmors them at runtime in the OS temp
+// consumed by scripts/manifests (which dearmors them at runtime in the OS temp
 // dir) to verify upstream signatures (e.g. apt InRelease) at manifest-
 // generation time.
 //

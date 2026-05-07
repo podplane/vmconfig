@@ -1,0 +1,21 @@
+[Unit]
+Description=kube-scheduler: The Kubernetes Scheduler
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/crt/kube-scheduler.client.crt
+ConditionPathExists=/opt/key/kube-scheduler/kube-scheduler.client.key
+Wants=kube-apiserver.service
+After=kube-apiserver.service
+[Service]
+Type=exec
+Restart=always
+User=kube-scheduler
+Group=kube-scheduler
+ExecStart=/usr/bin/kube-scheduler \
+    --v=2 \
+    --config=/opt/kube-scheduler/etc/kube-scheduler.yaml \
+    --tls-min-version=VersionTLS13 \
+    --tls-cipher-suites=TLS_AES_256_GCM_SHA384 \
+    --tls-cert-file=/opt/crt/kube-scheduler.client.crt \
+    --tls-private-key-file=/opt/key/kube-scheduler/kube-scheduler.client.key
+[Install]
+WantedBy=multi-user.target

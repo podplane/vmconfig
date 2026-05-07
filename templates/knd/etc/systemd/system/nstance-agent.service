@@ -1,0 +1,14 @@
+[Unit]
+Description=Nstance Agent
+Wants=network.target
+After=first-boot-env.service
+StartLimitIntervalSec=0
+[Service]
+Type=exec
+Restart=always
+RestartSec=5
+User=nstance-agent
+Group=nstance-agent
+ExecStart=/opt/nstance-agent/bin/run-nstance-agent.sh
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,18 @@
+[Unit]
+Description=kube2iam: IAM AssumeRole proxy for pods
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/crt/kube2iam.client.crt
+ConditionPathExists=/opt/key/kube2iam/kube2iam.client.key
+Wants=kube-apiserver.service
+After=kube-apiserver.service
+[Service]
+Type=exec
+Restart=always
+User=kube2iam
+Group=kube2iam
+StartLimitInterval=0
+RestartSec=10
+AmbientCapabilities=CAP_NET_ADMIN
+ExecStart=/opt/kube2iam/bin/run-kube2iam.sh
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=Zot Registry
+ConditionPathExists=/opt/crt/registry.server.crt
+ConditionPathExists=/opt/key/registry/registry.server.key
+After=network-online.target
+Requires=network-online.target
+StartLimitIntervalSec=0
+[Service]
+Type=exec
+Restart=always
+RestartSec=5
+User=zot
+Group=zot
+ExecStart=/opt/zot/bin/run-zot.sh
+[Install]
+WantedBy=multi-user.target

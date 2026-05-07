@@ -1,0 +1,19 @@
+[Unit]
+Description=kubelet: The Kubernetes Node Agent
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/crt/kubelet.client.crt
+ConditionPathExists=/opt/key/kubelet/kubelet.client.key
+ConditionPathExists=/opt/crt/kubelet.server.crt
+ConditionPathExists=/opt/key/kubelet/kubelet.server.key
+Wants=kube-apiserver.service
+After=kube-apiserver.service
+[Service]
+Type=exec
+Restart=always
+User=root
+Group=root
+StartLimitInterval=0
+RestartSec=10
+ExecStart=/opt/kubelet/bin/run-kubelet.sh
+[Install]
+WantedBy=multi-user.target

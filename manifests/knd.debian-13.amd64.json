@@ -1,0 +1,116 @@
+{
+  "vmconfig": {
+    "version": "dev",
+    "kind": "knd",
+    "os": {
+      "name": "debian-13",
+      "arch": "amd64",
+      "image": {
+        "version": "20260512-2476",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260512-2476/debian-13-genericcloud-amd64-20260512-2476.qcow2",
+        "type": "qcow2",
+        "digest": "sha512:902ea07fa2328d77b68a7052c30979535503acbfb5c4443c64f4aba7700dc0f1659e8c0debc2e620ed98186542aeb4e9a06d0d0b3b30c0f1074a4825b1a48f06",
+        "size": 341704704
+      },
+      "boot": {
+        "cmdline": "root=PARTUUID=94f1cc68-451a-460c-9e1a-dde8f1944735 ro console=tty0 console=ttyS0,115200 earlyprintk=ttyS0,115200 consoleblank=0",
+        "kernel": {
+          "partition": 1,
+          "path": "/boot/vmlinuz-6.12.86+deb13-cloud-amd64",
+          "digest": "sha256:659d6b7a021907a1c4b660a02914db7943b6305479dc992c97c0b7a8edd1c610"
+        },
+        "initrd": {
+          "partition": 1,
+          "path": "/boot/initrd.img-6.12.86+deb13-cloud-amd64",
+          "digest": "sha256:bce2fcd8f4512bcb7ef6feaff04d0115a3b2fee698249ce805927d4ed47ab46b"
+        }
+      }
+    },
+    "dependencies": {
+      "cni-plugins": {
+        "version": "1.9.1",
+        "url": "https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-amd64-v1.9.1.tgz",
+        "type": "tar.gz",
+        "digest": "sha256:b98f74a0f8522f0a83867178729c1aa70f2158f90c45a2ca8fa791db1c76b303",
+        "size": 55418181
+      },
+      "containerd": {
+        "version": "2.3.1",
+        "url": "https://github.com/containerd/containerd/releases/download/v2.3.1/containerd-2.3.1-linux-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:628448bd973610c656c1cbea8e88b32fafd85b23cc1aa4a3372eb7198478c054",
+        "size": 34541786
+      },
+      "crictl": {
+        "version": "1.36.0",
+        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.36.0/crictl-v1.36.0-linux-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:83855e114566a8a8c44c548d515670f51de3a5e1da8b2effb59870e2f10c25a3",
+        "size": 19263420
+      },
+      "fluent-bit": {
+        "version": "5.0.5",
+        "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.0.5_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:1de781c9d79828fc40c5738fed5478645d011062fd4680465643bd08a9ddabf2",
+        "size": 59007730
+      },
+      "kubelet": {
+        "version": "1.36.1",
+        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kubelet",
+        "type": "binary",
+        "digest": "sha256:7efa1780c73d9fb3a464002864e582eb2d15aa691e475eaae323093d08feae14",
+        "size": 60080393
+      },
+      "libpq5": {
+        "version": "17.9-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.9-0+deb13u1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:0f35933f3ba23b0dd37b486849a49975d03aede03eeba7bbf715b090eb7e1fc7",
+        "size": 228084
+      },
+      "libsubid5": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/libsubid5_4.17.4-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:4d4faef8143c117a055a9041a7e99f8ba014c420a9b6e2fef5c693482581a204",
+        "size": 222488
+      },
+      "nstance-agent": {
+        "version": "1.2.3",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.2.3/nstance-agent_1.2.3_linux_amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:daafe7aa0de99b475d6b430b5d56a188ef5a58a09b0ece1fec68323bdcac02965135c5d82778b0977d75b9cb4742cb9ad17ef61d14d0149a077e35ec8f2cdf8e",
+        "size": 5953829
+      },
+      "runc": {
+        "version": "1.4.2",
+        "url": "https://github.com/opencontainers/runc/releases/download/v1.4.2/runc.amd64",
+        "type": "binary",
+        "digest": "sha256:ac8a90f9e225bb9322189937b230cdc5478d5753f0e31e1bda98a5cf06bd9539",
+        "size": 12233104
+      },
+      "uidmap": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/uidmap_4.17.4-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:a017182d42a32ca241cd830a59153488e1f65ae6e31a760014575878044a9d2d",
+        "size": 193956
+      },
+      "vmconfig": {
+        "version": "dev",
+        "url": "",
+        "type": "tar.gz",
+        "digest": "",
+        "size": 0
+      },
+      "zot": {
+        "version": "2.1.17",
+        "url": "https://github.com/project-zot/zot/releases/download/v2.1.17/zot-linux-amd64-minimal",
+        "type": "binary",
+        "digest": "sha256:523e5bf29a013db09115f780c3152af98fc5b65fc408a0d3e6c293643dc9bde7",
+        "size": 77988142
+      }
+    }
+  }
+}

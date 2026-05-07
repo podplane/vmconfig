@@ -1,0 +1,13 @@
+[Unit]
+Description=Fluent Bit
+After=network-online.target
+Requires=network-online.target
+StartLimitInterval=10
+StartLimitBurst=5
+[Service]
+User=fluent-bit
+Group=fluent-bit
+ExecStart=/opt/fluent-bit/bin/run-fluent-bit.sh
+Restart=always
+[Install]
+WantedBy=multi-user.target

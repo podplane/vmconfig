@@ -7,7 +7,7 @@
 # disables service starts via policy-rc.d and never invokes systemctl.
 #
 # All other packages (uidmap, libsubid5, libpq5, fluent-bit, etc.) are
-# installed by install.sh itself from the staged deb files in /opt/podplane/deps.
+# installed by install.sh itself from the staged deb files in /opt/podplane/artifacts.
 
 FROM debian:13-slim
 
@@ -17,7 +17,7 @@ FROM debian:13-slim
 #
 #   2. libcurl4t64, libsasl2-2, libyaml-0-2 (transitive deps of fluent-bit)
 #      and libgssapi-krb5-2, libldap2 (transitive deps of libpq5).
-#      The deps manifest deliberately does NOT ship these because the
+#      The vmconfig manifest deliberately does NOT ship these because the
 #      Debian 13 cloud image (the real VM target) already has them; the
 #      slim base image we test against does not. Installing them here
 #      mirrors that assumption so `dpkg -i` in install.sh can complete

@@ -3,8 +3,8 @@
 # Copyright 2026 Nadrama Pty Ltd
 # SPDX-License-Identifier: Apache-2.0
 #
-# populate-cache.sh - download (and sha256-verify) the dep artifacts
-# referenced by deps/<kind>.<os>.<arch>.json into a persistent host cache
+# populate-cache.sh - download and digest-verify the dep artifacts
+# referenced by manifests/<kind>.<os>.<arch>.json into a persistent host cache
 # under temp/deps-cache/<kind>/<os>/<arch>/, ready to be mounted into the
 # install.sh test container.
 #
@@ -39,7 +39,7 @@ fi
 OS_NAME="debian-13"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-MANIFEST="$REPO_ROOT/deps/${KIND}.${OS_NAME}.${ARCH}.json"
+MANIFEST="$REPO_ROOT/manifests/${KIND}.${OS_NAME}.${ARCH}.json"
 CACHE_DIR="$REPO_ROOT/temp/deps-cache/${KIND}/${OS_NAME}/${ARCH}"
 
 [ -f "$MANIFEST" ] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
@@ -55,11 +55,17 @@ mkdir -p "$CACHE_DIR"
 
 log() { printf '[cache] %s\n' "$*"; }
 
-# Returns 0 iff the file's sha256 matches the supplied "sha256:<hex>" digest.
+# Returns 0 iff the file matches the supplied "<algo>:<hex>" digest.
 verify() {
-  local file="$1" digest="$2" actual
-  actual=$(shasum -a 256 "$file" | awk '{print $1}')
-  [ "$actual" = "${digest#sha256:}" ]
+  local file="$1" digest="$2" algo hex actual
+  algo="${digest%%:*}"
+  hex="${digest#*:}"
+  case "$algo" in
+    sha256) actual=$(shasum -a 256 "$file" | awk '{print $1}') ;;
+    sha512) actual=$(shasum -a 512 "$file" | awk '{print $1}') ;;
+    *) echo "unsupported digest algorithm: $algo" >&2; return 1 ;;
+  esac
+  [ "$actual" = "$hex" ]
 }
 
 # Download to a sibling temp file, verify, then atomically rename into place.

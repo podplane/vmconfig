@@ -15,10 +15,12 @@ SHELL := /bin/bash
 TEMP_DIR := temp
 DIST_DIR := dist
 OS_NAME  := debian-13
+# PODPLANE_CLI ?= podplane
+PODPLANE_CLI ?= go -C $(CURDIR)/../podplane run .
 
 # Version baked into local package artifacts. The release pipeline overrides
 # this on the command line (e.g. `make package-knc VERSION=1.0.0`); local
-# dev builds keep the conventional "dev" marker, same as deps manifest stubs.
+# dev builds keep the conventional "dev" marker, same as manifest stubs.
 VERSION ?= dev
 
 # GNU tar is required for --owner/--group/--mtime/--sort (reproducible
@@ -39,15 +41,17 @@ RSYNC_FLAGS := -a
 
 # Host architecture, normalised to the same {amd64,arm64} vocabulary used by
 # the package targets. Used by the test-install targets below to pick the
-# matching deps manifest and pre-built package tarball for the local docker
+# matching manifest and pre-built package tarball for the local docker
 # engine's native platform.
 HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 
-.PHONY: help setup lint precommit update-deps update-trust \
+.PHONY: help setup lint precommit update-manifests update-trust \
         build build-knd build-knc \
         package package-knd package-knc \
         package-knd-amd64 package-knd-arm64 package-knc-amd64 package-knc-arm64 \
         test-install test-install-knd test-install-knc \
+        local-sync knd-sync knc-sync \
+        local-watch knd-watch knc-watch \
         clean
 
 help: ## Show this help message
@@ -84,6 +88,12 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 	  echo "  Debian/Ubuntu: apt install jq"; \
 	  exit 1; \
 	}
+	@command -v shasum >/dev/null 2>&1 || { \
+	  echo "Error: 'shasum' not found in PATH"; \
+	  echo "  macOS:         preinstalled"; \
+	  echo "  Debian/Ubuntu: apt install perl"; \
+	  exit 1; \
+	}
 	@echo "All required tools present."
 	@if [ -d .git ]; then \
 	  cp scripts/git-hooks/pre-commit .git/hooks/pre-commit; \
@@ -100,10 +110,10 @@ lint: ## Run shellcheck on all shell scripts under templates/ and scripts/
 precommit: ## Run all pre-commit checks (lint)
 	@$(MAKE) lint
 
-update-deps: ## Refresh vmconfig/deps/<kind>.<os>.<arch>.json (verified via gpg + cosign)
+update-manifests: ## Refresh manifests/<kind>.<os>.<arch>.json (verified via gpg + cosign)
 	@mkdir -p $(TEMP_DIR)
-	@rm -f $(TEMP_DIR)/update-deps.log
-	go run ./scripts/deps --deps-dir=./deps --trust-dir=./trust 2>&1 | tee $(TEMP_DIR)/update-deps.log
+	@rm -f $(TEMP_DIR)/update-manifests.log
+	go run ./scripts/manifests --manifests-dir=./manifests --trust-dir=./trust 2>&1 | tee $(TEMP_DIR)/update-manifests.log
 
 update-trust: ## Refresh vmconfig/trust/*.asc keyring files
 	@mkdir -p $(TEMP_DIR)
@@ -116,7 +126,7 @@ update-trust: ## Refresh vmconfig/trust/*.asc keyring files
 #
 # Each build target produces ./dist/<kind>/, a tree whose paths are
 # system-root-relative (e.g. opt/podplane/bin/install.sh). The build is
-# deliberately arch-agnostic: the only arch-varying file is the deps
+# deliberately arch-agnostic: the only arch-varying file is the dependency
 # manifest, and that gets injected at packaging time via tar --transform
 # (see the package targets below). An empty opt/podplane/share/ is
 # created during build so the tarball carries a proper directory entry
@@ -154,15 +164,19 @@ build-knc: setup ## Build ./dist/knc from ./templates/{knd,knc} (knc overlays kn
 # One reproducible tarball per kind/arch, named
 # vmconfig_<VERSION>_<kind>_<os>_<arch>.tar.gz
 #
-# Each package recipe tars two sources together:
-#   1. dist/<kind>/                       - the arch-agnostic build tree
-#   2. dist/deps/<kind>.<os>.<arch>.json  - the arch-specific deps manifest,
-#                                           staged from deps/ with $(VERSION)
-#                                           baked in
+# Each package recipe tars three sources together:
+#   1. dist/<kind>/                                  - the arch-agnostic build tree
+#   2. dist/manifests/<kind>.<os>.<arch>.json        - the arch-specific dependency manifest,
+#                                                      staged from manifests/ with $(VERSION)
+#                                                      baked in
+#   3. dist/manifests/<kind>.<os>.<arch>.sh          - shell vars generated from the dependency
+# 													   manifest (above)
 #
-# The second source is renamed in-archive to /opt/podplane/share/deps.json
-# via --transform, so the tarball ships exactly one deps.json regardless
-# of which arch's manifest was injected.
+# The second and third sources are renamed in-archive to
+# - /opt/podplane/share/vmconfig-manifest.json
+# - /opt/podplane/share/vmconfig-manifest.sh
+# via --transform, so the tarball ships exactly one manifest/install plan pair
+# regardless of which arch was injected.
 
 package: package-knd package-knc
 
@@ -171,47 +185,63 @@ package-knd: package-knd-amd64 package-knd-arm64 ## Package both knd arch tarbal
 package-knc: package-knc-amd64 package-knc-arm64 ## Package both knc arch tarballs
 
 package-knd-amd64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_amd64.tar.gz
-	@mkdir -p $(DIST_DIR)/deps
+	@mkdir -p $(DIST_DIR)/manifests
 	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  deps/knd.$(OS_NAME).amd64.json > $(DIST_DIR)/deps/knd.$(OS_NAME).amd64.json
+	  manifests/knd.$(OS_NAME).amd64.json > $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.json
+	scripts/manifests.sh \
+	  $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.json \
+	  $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.sh
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knd\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.amd64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz \
 	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR)/$(DIST_DIR)/deps knd.$(OS_NAME).amd64.json
+	  -C $(CURDIR)/$(DIST_DIR)/manifests knd.$(OS_NAME).amd64.json knd.$(OS_NAME).amd64.sh
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz"
 
 package-knd-arm64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_arm64.tar.gz
-	@mkdir -p $(DIST_DIR)/deps
+	@mkdir -p $(DIST_DIR)/manifests
 	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  deps/knd.$(OS_NAME).arm64.json > $(DIST_DIR)/deps/knd.$(OS_NAME).arm64.json
+	  manifests/knd.$(OS_NAME).arm64.json > $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.json
+	scripts/manifests.sh \
+	  $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.json \
+	  $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.sh
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knd\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
+	  --transform 's|^knd\.$(OS_NAME)\.arm64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz \
 	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR)/$(DIST_DIR)/deps knd.$(OS_NAME).arm64.json
+	  -C $(CURDIR)/$(DIST_DIR)/manifests knd.$(OS_NAME).arm64.json knd.$(OS_NAME).arm64.sh
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz"
 
 package-knc-amd64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_amd64.tar.gz
-	@mkdir -p $(DIST_DIR)/deps
+	@mkdir -p $(DIST_DIR)/manifests
 	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  deps/knc.$(OS_NAME).amd64.json > $(DIST_DIR)/deps/knc.$(OS_NAME).amd64.json
+	  manifests/knc.$(OS_NAME).amd64.json > $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.json
+	scripts/manifests.sh \
+	  $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.json \
+	  $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.sh
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knc\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.amd64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz \
 	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR)/$(DIST_DIR)/deps knc.$(OS_NAME).amd64.json
+	  -C $(CURDIR)/$(DIST_DIR)/manifests knc.$(OS_NAME).amd64.json knc.$(OS_NAME).amd64.sh
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz"
 
 package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.tar.gz
-	@mkdir -p $(DIST_DIR)/deps
+	@mkdir -p $(DIST_DIR)/manifests
 	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  deps/knc.$(OS_NAME).arm64.json > $(DIST_DIR)/deps/knc.$(OS_NAME).arm64.json
+	  manifests/knc.$(OS_NAME).arm64.json > $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.json
+	scripts/manifests.sh \
+	  $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.json \
+	  $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.sh
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knc\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/deps.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
+	  --transform 's|^knc\.$(OS_NAME)\.arm64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
 	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz \
 	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR)/$(DIST_DIR)/deps knc.$(OS_NAME).arm64.json
+	  -C $(CURDIR)/$(DIST_DIR)/manifests knc.$(OS_NAME).arm64.json knc.$(OS_NAME).arm64.sh
 	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz"
 
 # ---------------------------------------------------------------------------
@@ -227,7 +257,7 @@ package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.t
 #
 # The host-side dep cache lives at temp/deps-cache/<kind>/<os>/<arch>/ and
 # is mounted read-only into the container at /var/cache/vmconfig-deps. The
-# container entrypoint copies it into /opt/podplane/deps so install.sh's
+# container entrypoint copies it into /opt/podplane/artifacts so install.sh's
 # rm -rf at the end cannot touch the host cache.
 
 test-install: test-install-knd test-install-knc ## Run install.sh test for both kinds
@@ -244,3 +274,62 @@ test-install-knc: package-knc-$(HOST_ARCH) ## Run install.sh in a debian contain
 
 clean: ## Remove the temp/ and dist/ directories
 	rm -rf $(TEMP_DIR) $(DIST_DIR)
+
+# ---------------------------------------------------------------------------
+# Dev targets
+# ---------------------------------------------------------------------------
+
+# Sync templates to Podplane CLI local VM.
+local-sync: ## Build and sync INSTANCE_KIND={knd,knc} into the local VM
+	@[ "$(INSTANCE_KIND)" = "knd" ] || [ "$(INSTANCE_KIND)" = "knc" ] || { \
+	  echo "INSTANCE_KIND must be knd or knc" >&2; \
+	  exit 1; \
+	}
+	$(MAKE) build-$(INSTANCE_KIND)
+	@mkdir -p $(DIST_DIR)/manifests $(DIST_DIR)/$(INSTANCE_KIND)/opt/podplane/share
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
+	  manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).json > $(DIST_DIR)/manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).json
+	scripts/manifests.sh \
+	  $(DIST_DIR)/manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).json \
+	  $(DIST_DIR)/manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).sh
+	cp $(DIST_DIR)/manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).json \
+	  $(DIST_DIR)/$(INSTANCE_KIND)/opt/podplane/share/vmconfig-manifest.json
+	cp $(DIST_DIR)/manifests/$(INSTANCE_KIND).$(OS_NAME).$(HOST_ARCH).sh \
+	  $(DIST_DIR)/$(INSTANCE_KIND)/opt/podplane/share/vmconfig-manifest.sh
+	$(PODPLANE_CLI) local sync --chown=root:root \
+	  --exclude=/opt/podplane/share/vmconfig-manifest.json \
+	  --exclude=/opt/podplane/share/vmconfig-manifest.sh \
+	  $(CURDIR)/$(DIST_DIR)/$(INSTANCE_KIND)/ /
+	@if ! $(PODPLANE_CLI) local shell "test -f /opt/podplane/share/vmconfig-installed.json" >/dev/null 2>&1; then \
+	  $(PODPLANE_CLI) local sync --chown=root:root $(CURDIR)/$(DIST_DIR)/$(INSTANCE_KIND)/opt/podplane/share/ /opt/podplane/share/ && \
+	  $(PODPLANE_CLI) local shell "sudo bash /var/lib/cloud/instance/scripts/part-001"; \
+	else \
+	  $(PODPLANE_CLI) local shell "sudo rm -f /opt/podplane/share/vmconfig-manifest.json /opt/podplane/share/vmconfig-manifest.sh"; \
+	  $(PODPLANE_CLI) local shell "sudo /opt/podplane/bin/configure.sh && sudo /opt/podplane/bin/restart.sh"; \
+	fi
+
+knd-sync: ## Build and sync knd into the local VM
+	$(MAKE) local-sync INSTANCE_KIND=knd
+
+knc-sync: ## Build and sync knc into the local VM
+	$(MAKE) local-sync INSTANCE_KIND=knc
+
+local-watch: ## Watch templates and sync/apply INSTANCE_KIND={knd,knc} on change
+	@[ "$(INSTANCE_KIND)" = "knd" ] || [ "$(INSTANCE_KIND)" = "knc" ] || { \
+	  echo "INSTANCE_KIND must be knd or knc" >&2; \
+	  exit 1; \
+	}
+	@command -v watchexec >/dev/null 2>&1 || { \
+	  echo "Error: 'watchexec' not found in PATH" >&2; \
+	  echo "  macOS:         brew install watchexec" >&2; \
+	  echo "  Debian/Ubuntu: install watchexec from your package manager" >&2; \
+	  exit 1; \
+	}
+	watchexec --shell=bash --watch templates --watch manifests --watch scripts --watch Makefile --exts sh,json --on-busy-update queue -- \
+	  '$(MAKE) local-sync INSTANCE_KIND=$(INSTANCE_KIND)'
+
+knd-watch: ## Watch templates and sync/apply knd on change
+	$(MAKE) local-watch INSTANCE_KIND=knd
+
+knc-watch: ## Watch templates and sync/apply knc on change
+	$(MAKE) local-watch INSTANCE_KIND=knc

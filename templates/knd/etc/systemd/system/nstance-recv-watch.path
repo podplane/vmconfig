@@ -1,0 +1,10 @@
+[Unit]
+Description=Monitor nstance-agent receive output
+Documentation=man:systemd.path(5)
+
+[Path]
+PathExists=/opt/nstance-agent/recv/write-files.last
+Unit=nstance-recv-watch.service
+
+[Install]
+WantedBy=multi-user.target

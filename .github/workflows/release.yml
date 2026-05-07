@@ -7,20 +7,22 @@
 # For tag vX.Y.Z (or vX.Y.Z-rcN for pre-releases), this:
 #   1. Builds the four arch/kind tarballs via `make package VERSION=X.Y.Z`.
 #      The Makefile bakes the version into each tarball's embedded
-#      /opt/podplane/share/deps.json.
-#   2. Generates four standalone deps manifests under dist/release/ that
+#      /opt/podplane/share/vmconfig-manifest.json.
+#   2. Generates four standalone dependency manifests under dist/ from the
+#      versioned package manifests staged under dist/manifests/; they
 #      additionally contain a .vmconfig.dependencies.vmconfig entry with
-#      the URL + sha256 digest of the matching tarball — the self-reference
-#      VMs need to fetch + verify vmconfig.tar.gz before extraction.
+#      the URL + sha256 digest + size of the matching tarball — the
+#      self-reference VMs need to fetch + verify vmconfig.tar.gz before
+#      extraction.
 #   3. Writes vmconfig_<VERSION>_checksums.txt (sha512) covering all
 #      eight artifacts and signs it keyless with cosign (Fulcio + Rekor
 #      via GitHub OIDC), producing a single self-contained sigstore bundle
-#      named vmconfig_<VERSION>_checksums.txt.sigstore.json.
+#      named vmconfig_<VERSION>_checksums.txt.bundle.
 #   4. Creates a GitHub Release with auto-generated notes and uploads:
 #         - 4 tarballs
-#         - 4 standalone .deps.json manifests
+#         - 4 standalone .json manifests
 #         - vmconfig_<VERSION>_checksums.txt
-#         - vmconfig_<VERSION>_checksums.txt.sigstore.json
+#         - vmconfig_<VERSION>_checksums.txt.bundle
 
 name: release
 
@@ -65,7 +67,7 @@ jobs:
       - name: Build & package
         run: make package VERSION=${{ steps.meta.outputs.version }}
 
-      - name: Generate standalone deps manifests (with tarball URL + digest)
+      - name: Generate standalone dependency manifests (with tarball URL + digest)
         env:
           VERSION: ${{ steps.meta.outputs.version }}
           REPO: ${{ github.repository }}
@@ -75,14 +77,17 @@ jobs:
             for arch in amd64 arm64; do
               tarball="vmconfig_${VERSION}_${kind}_debian-13_${arch}.tar.gz"
               digest="sha256:$(sha256sum "dist/${tarball}" | awk '{print $1}')"
+              size="$(stat -c%s "dist/${tarball}")"
               url="https://github.com/${REPO}/releases/download/v${VERSION}/${tarball}"
               jq \
                 --arg url "$url" \
                 --arg digest "$digest" \
+                --argjson size "$size" \
                 '.vmconfig.dependencies.vmconfig.url = $url
-                 | .vmconfig.dependencies.vmconfig.digest = $digest' \
-                "dist/deps/${kind}.debian-13.${arch}.json" \
-                > "dist/vmconfig_${VERSION}_${kind}_debian-13_${arch}.deps.json"
+                 | .vmconfig.dependencies.vmconfig.digest = $digest
+                 | .vmconfig.dependencies.vmconfig.size = $size' \
+                "dist/manifests/${kind}.debian-13.${arch}.json" \
+                > "dist/vmconfig_${VERSION}_${kind}_debian-13_${arch}.json"
             done
           done
 
@@ -91,7 +96,7 @@ jobs:
         env:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          sha512sum vmconfig_*.tar.gz vmconfig_*.deps.json \
+          sha512sum vmconfig_*.tar.gz vmconfig_*.json \
             | sort -k2 > "vmconfig_${VERSION}_checksums.txt"
           cat "vmconfig_${VERSION}_checksums.txt"
 
@@ -102,7 +107,7 @@ jobs:
         run: |
           cosign sign-blob \
             --yes \
-            --bundle="vmconfig_${VERSION}_checksums.txt.sigstore.json" \
+            --bundle="vmconfig_${VERSION}_checksums.txt.bundle" \
             "vmconfig_${VERSION}_checksums.txt"
 
       - name: Create GitHub Release
@@ -110,9 +115,9 @@ jobs:
         with:
           files: |
             dist/vmconfig_*.tar.gz
-            dist/vmconfig_*.deps.json
+            dist/vmconfig_*.json
             dist/vmconfig_*_checksums.txt
-            dist/vmconfig_*_checksums.txt.sigstore.json
+            dist/vmconfig_*_checksums.txt.bundle
           generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease }}
           fail_on_unmatched_files: true

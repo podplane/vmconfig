@@ -1,0 +1,19 @@
+[Unit]
+Description=Kubernetes API Server
+ConditionPathExists=/opt/crt/ca.crt
+ConditionPathExists=/opt/pub/service-accounts.pub
+ConditionPathExists=/opt/key/kube-apiserver/service-accounts.key
+ConditionPathExists=/opt/crt/kube-apiserver.client.crt
+ConditionPathExists=/opt/key/kube-apiserver/kube-apiserver.client.key
+ConditionPathExists=/opt/crt/kube-apiserver.server.crt
+ConditionPathExists=/opt/key/kube-apiserver/kube-apiserver.server.key
+Wants=netsy.service
+After=netsy.service
+[Service]
+Type=exec
+Restart=always
+User=kube-apiserver
+Group=kube-apiserver
+ExecStart=/opt/kube-apiserver/bin/run-kube-apiserver.sh
+[Install]
+WantedBy=multi-user.target

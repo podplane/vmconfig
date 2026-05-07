@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh managed hosts file entries
+ConditionPathExists=/opt/podplane/etc/user-data.env
+ConditionPathExists=/opt/podplane/etc/detected.env
+ConditionPathExists=/opt/podplane/etc/mutable.env
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/podplane/lib/configure/hosts.sh
