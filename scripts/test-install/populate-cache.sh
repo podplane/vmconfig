@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Podplane <https://podplane.dev>
-# Copyright 2026 Nadrama Pty Ltd
+# Copyright The Podplane Authors
 # SPDX-License-Identifier: Apache-2.0
 #
 # populate-cache.sh - download and digest-verify the dep artifacts

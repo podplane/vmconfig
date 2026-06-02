@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Podplane <https://podplane.dev>
-# Copyright 2026 Nadrama Pty Ltd
+# Copyright The Podplane Authors
 # SPDX-License-Identifier: Apache-2.0
 #
 # Render the exact manifest JSON staged for a vmconfig package as shell
