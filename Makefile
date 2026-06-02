@@ -45,7 +45,7 @@ RSYNC_FLAGS := -a
 # engine's native platform.
 HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 
-.PHONY: help setup lint precommit update-manifests update-trust \
+.PHONY: help setup lint precommit test ci update-manifests update-trust \
         build build-knd build-knc \
         package package-knd package-knc \
         package-knd-amd64 package-knd-arm64 package-knc-amd64 package-knc-arm64 \
@@ -98,6 +98,8 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 	@if [ -d .git ]; then \
 	  cp scripts/git-hooks/pre-commit .git/hooks/pre-commit; \
 	  chmod +x .git/hooks/pre-commit; \
+	  cp scripts/git-hooks/commit-msg .git/hooks/commit-msg; \
+	  chmod +x .git/hooks/commit-msg; \
 	  echo "Git hooks installed."; \
 	else \
 	  echo "Skipping git hook install (.git not found)."; \
@@ -105,10 +107,15 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 
 lint: ## Run shellcheck on all shell scripts under templates/ and scripts/
 	@echo "Running shellcheck..."
-	@shellcheck $$(find templates scripts -name '*.sh' -type f)
+	@shellcheck $$(find templates scripts -type f \( -name '*.sh' -o -path 'scripts/git-hooks/*' \))
 
 precommit: ## Run all pre-commit checks (lint)
 	@$(MAKE) lint
+
+test: ## Run Go tests
+	go test ./...
+
+ci: precommit test package ## Run CI checks and build all package artifacts
 
 update-manifests: ## Refresh manifests/<kind>.<os>.<arch>.json (verified via gpg + cosign)
 	@mkdir -p $(TEMP_DIR)

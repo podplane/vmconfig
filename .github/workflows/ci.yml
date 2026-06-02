@@ -1,0 +1,26 @@
+# Podplane <https://podplane.dev>
+# Copyright 2026 Nadrama Pty Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+name: ci
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq rsync shellcheck
+      - name: Check, test, and package
+        run: make ci
