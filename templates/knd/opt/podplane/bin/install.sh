@@ -176,12 +176,10 @@ if [ "${#VMCONFIG_DEPENDENCIES_DEB[@]}" -gt 0 ]; then
   trap - EXIT
 fi
 
-log "extracting tarballs..."
-for name in "${VMCONFIG_DEPENDENCIES_TAR_GZ[@]}"; do
-  # vmconfig is already extracted to / by user-data; tar --diff above
-  # has confirmed it. Skip here so we don't clobber it.
-  [ "$name" = "vmconfig" ] && continue
-  src="${ARTIFACTS_DIR}/${name}.tar.gz"
+extract_tarball() { # <name>
+  local name="$1"
+  local src="${ARTIFACTS_DIR}/${name}.tar.gz"
+  log "extracting tarball ${name}..."
   case "$name" in
     containerd)  tar -xzf "$src" -C /usr/local bin/containerd bin/containerd-shim-runc-v2 bin/ctr ;;
     crictl)      tar -xzf "$src" -C /usr/local/bin crictl ;;
@@ -190,7 +188,27 @@ for name in "${VMCONFIG_DEPENDENCIES_TAR_GZ[@]}"; do
     cni-plugins) mkdir -p /opt/cni/bin && tar -xzf "$src" -C /opt/cni/bin ;;
     *)           fatal "no extract rule for tarball ${name}" ;;
   esac
+  log "extracted tarball ${name}"
+}
+
+log "extracting tarballs..."
+tar_pids=()
+for name in "${VMCONFIG_DEPENDENCIES_TAR_GZ[@]}"; do
+  # vmconfig is already extracted to / by user-data; tar --diff above
+  # has confirmed it. Skip here so we don't clobber it.
+  [ "$name" = "vmconfig" ] && continue
+  extract_tarball "$name" &
+  tar_pids+=("$!")
 done
+tar_failed=false
+for pid in "${tar_pids[@]}"; do
+  if ! wait "$pid"; then
+    tar_failed=true
+  fi
+done
+if [ "$tar_failed" = true ]; then
+  fatal "one or more tarball extractions failed"
+fi
 
 log "installing binaries..."
 for name in "${VMCONFIG_DEPENDENCIES_BINARY[@]}"; do
