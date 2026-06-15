@@ -37,61 +37,73 @@ case "${REGISTRY_ENABLED:-true}" in
   *) fatal "REGISTRY_ENABLED must be true or false" ;;
 esac
 
-log "restarting systemd services..."
-systemctl daemon-reload
+systemctl_logged() {
+  log "systemctl $*"
+  systemctl "$@"
+  log "systemctl $* done"
+}
 
-systemctl enable nstance-recv-watch.service
-systemctl enable nstance-recv-watch.path
-systemctl start nstance-recv-watch.path
-systemctl enable hosts-refresh.timer
-systemctl start hosts-refresh.timer
+systemctl_logged_optional() {
+  if ! systemctl_logged "$@"; then
+    log "systemctl $* failed; continuing."
+  fi
+}
+
+log "restarting systemd services..."
+systemctl_logged daemon-reload
+
+systemctl_logged enable nstance-recv-watch.service
+systemctl_logged enable nstance-recv-watch.path
+systemctl_logged start nstance-recv-watch.path
+systemctl_logged enable hosts-refresh.timer
+systemctl_logged start hosts-refresh.timer
 
 if fluent_bit_enabled; then
-  systemctl enable fluent-bit
-  systemctl restart fluent-bit
+  systemctl_logged enable fluent-bit
+  systemctl_logged restart fluent-bit
 else
-  systemctl disable fluent-bit || true
-  systemctl stop fluent-bit || true
+  systemctl_logged_optional disable fluent-bit
+  systemctl_logged_optional stop fluent-bit
 fi
 
 if zot_enabled; then
-  systemctl enable zot
-  systemctl restart zot
+  systemctl_logged enable zot
+  systemctl_logged restart zot
 else
-  systemctl disable zot || true
-  systemctl stop zot || true
+  systemctl_logged_optional disable zot
+  systemctl_logged_optional stop zot
 fi
 
-systemctl enable containerd
-systemctl restart containerd
-systemctl enable nstance-agent
-systemctl restart nstance-agent
+systemctl_logged enable containerd
+systemctl_logged restart containerd
+systemctl_logged enable nstance-agent
+systemctl_logged restart nstance-agent
 
 if netsy_enabled; then
-  systemctl enable netsy
-  systemctl restart netsy
+  systemctl_logged enable netsy
+  systemctl_logged restart netsy
 fi
 
 if kube_apiserver_enabled; then
-  systemctl enable kube-apiserver
-  systemctl restart kube-apiserver
+  systemctl_logged enable kube-apiserver
+  systemctl_logged restart kube-apiserver
 fi
 
 if kube_controller_manager_enabled; then
-  systemctl enable kube-controller-manager
+  systemctl_logged enable kube-controller-manager
 fi
 
 if kube_scheduler_enabled; then
-  systemctl enable kube-scheduler
+  systemctl_logged enable kube-scheduler
 fi
 
 if kube2iam_enabled; then
-  systemctl enable kube2iam
-  systemctl restart kube2iam
+  systemctl_logged enable kube2iam
+  systemctl_logged restart kube2iam
 else
-  systemctl disable kube2iam || true
-  systemctl stop kube2iam || true
+  systemctl_logged_optional disable kube2iam
+  systemctl_logged_optional stop kube2iam
 fi
 
-systemctl enable kubelet
+systemctl_logged enable kubelet
 log "done restarting systemd services."
