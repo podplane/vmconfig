@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+log() { printf '[run-kubelet] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
+
+log "starting"
+
 # shellcheck source=/dev/null
 source /opt/env/kubelet.env
+log "loaded /opt/env/kubelet.env"
 
 labels=()
 if [[ -n "${PROVIDER_INSTANCE_TYPE}" ]]; then
@@ -28,4 +33,5 @@ if [[ -n "${INSTANCE_PROVIDER_ID}" ]]; then
     args+=("--provider-id=${INSTANCE_PROVIDER_ID}")
 fi
 
+log "exec kubelet"
 exec /usr/bin/kubelet "${args[@]}"

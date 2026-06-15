@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+log() { printf '[run-nstance-agent] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
+
+log "starting"
+
 # shellcheck source=/dev/null
 source /opt/env/nstance-agent.env
+log "loaded /opt/env/nstance-agent.env"
 
 args=(
 )
@@ -24,4 +29,5 @@ export NSTANCE_INSTANCE_IPV6
 export NSTANCE_METRICS_INTERVAL
 export NSTANCE_SPOT_POLL_INTERVAL
 
+log "exec nstance-agent"
 exec /opt/nstance-agent/bin/nstance-agent "${args[@]}"

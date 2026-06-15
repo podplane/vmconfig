@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+log() { printf '[run-netsy] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
+
+log "starting"
+
 # shellcheck source=/dev/null
 source /opt/env/netsy.env
+log "loaded /opt/env/netsy.env"
 
 export INSTANCE_ID
 export INSTANCE_HOSTNAME
@@ -48,4 +53,5 @@ if [ -n "${AWS_ROLE_SESSION_NAME:-}" ]; then
   export AWS_ROLE_SESSION_NAME
 fi
 
+log "exec netsy"
 exec /opt/netsy/bin/netsy

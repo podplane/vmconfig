@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+log() { printf '[run-kube-apiserver] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
+
+log "starting"
+
 # shellcheck source=/dev/null
 source /opt/env/kube-apiserver.env
+log "loaded /opt/env/kube-apiserver.env"
 
 serviceAccountKeyFile='/opt/pub/service-accounts.pub'
 serviceAccountSigningKeyFile='/opt/key/kube-apiserver/service-accounts.key'
@@ -30,11 +35,12 @@ allFiles=(
 )
 for file in "${allFiles[@]}"; do
   if [ ! -f "${file}" ]; then
-    echo "kube-apiserver prerequisite failed: file ${file} not found - sleeping for 2 seconds before exiting run script..."
+    log "prerequisite failed: file ${file} not found - sleeping for 2 seconds before exiting run script..."
     sleep 2
     exit 1
   fi
 done
+log "prerequisite files exist"
 
 args=(
   # Set logging verbosity for debugging
@@ -195,4 +201,5 @@ if [ -n "$OIDC_CA_FILE" ]; then
   fi
 fi
 
+log "exec kube-apiserver"
 exec /usr/bin/kube-apiserver "${args[@]}"

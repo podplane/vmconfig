@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
 set -e
+
+log() { printf '[run-zot] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
+
+log "starting"
 # shellcheck source=/dev/null
 source /opt/env/zot.env
+log "loaded /opt/env/zot.env"
 if [ "$REGISTRY_BUCKET" == "" ]
 then
-    echo "REGISTRY_BUCKET is not set. Exiting..."
+    log "REGISTRY_BUCKET is not set. Exiting..."
     exit 1
 fi
 if [ ! -f /opt/crt/registry.server.crt ]
 then
-    echo "registry.server.crt is not found. Exiting..."
+    log "registry.server.crt is not found. Exiting..."
     exit 1
 fi
 if [ ! -f /opt/key/registry/registry.server.key ]
 then
-    echo "registry.server.key is not found. Exiting..."
+    log "registry.server.key is not found. Exiting..."
     exit 1
 fi
 if [ ! -f /opt/zot/etc/zot.yml ]
 then
-    echo "zot.yml is not found. Exiting..."
+    log "zot.yml is not found. Exiting..."
     exit 1
 fi
 args=(
@@ -34,4 +39,5 @@ elif [ "${REGISTRY_ACCESS_KEY_ID:-}" != "" ] || [ "${REGISTRY_SECRET_ACCESS_KEY:
     export AWS_ACCESS_KEY_ID="${REGISTRY_ACCESS_KEY_ID}"
     export AWS_SECRET_ACCESS_KEY="${REGISTRY_SECRET_ACCESS_KEY}"
 fi
+log "exec zot"
 exec /usr/bin/zot "${args[@]}"
