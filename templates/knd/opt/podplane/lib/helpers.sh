@@ -11,13 +11,19 @@
 # log prints a message prefixed with the calling script name.
 log() {
   local source_index=$((${#BASH_SOURCE[@]} - 1))
-  printf '[%s] %s\n' "$(basename "${BASH_SOURCE[$source_index]:-$0}" .sh)" "$*"
+  local source="${BASH_SOURCE[$source_index]:-$0}"
+  source="${source##*/}"
+  source="${source%.sh}"
+  printf '[%s] %s\tts=%s\n' "$source" "$*" "$EPOCHREALTIME"
 }
 
 # fatal prints an error prefixed with the calling script name and exits.
 fatal() {
   local source_index=$((${#BASH_SOURCE[@]} - 1))
-  printf '[%s] FATAL: %s\n' "$(basename "${BASH_SOURCE[$source_index]:-$0}" .sh)" "$*" >&2
+  local source="${BASH_SOURCE[$source_index]:-$0}"
+  source="${source##*/}"
+  source="${source%.sh}"
+  printf '[%s] FATAL: %s\tts=%s\n' "$source" "$*" "$EPOCHREALTIME" >&2
   exit 1
 }
 
