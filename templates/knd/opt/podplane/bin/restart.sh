@@ -49,61 +49,76 @@ systemctl_logged_optional() {
   fi
 }
 
-log "restarting systemd services..."
-systemctl_logged daemon-reload
-
-systemctl_logged enable nstance-recv-watch.service
-systemctl_logged enable nstance-recv-watch.path
-systemctl_logged start nstance-recv-watch.path
-systemctl_logged enable hosts-refresh.timer
-systemctl_logged start hosts-refresh.timer
+enable_units=(
+  nstance-recv-watch.service
+  nstance-recv-watch.path
+  hosts-refresh.timer
+  containerd
+  nstance-agent
+  kubelet
+)
+start_units=(
+  nstance-recv-watch.path
+  hosts-refresh.timer
+)
+restart_units=(
+  containerd
+  nstance-agent
+)
+disable_units=()
+stop_units=()
 
 if fluent_bit_enabled; then
-  systemctl_logged enable fluent-bit
-  systemctl_logged restart fluent-bit
+  enable_units+=(fluent-bit)
+  restart_units+=(fluent-bit)
 else
-  systemctl_logged_optional disable fluent-bit
-  systemctl_logged_optional stop fluent-bit
+  disable_units+=(fluent-bit)
+  stop_units+=(fluent-bit)
 fi
 
 if zot_enabled; then
-  systemctl_logged enable zot
-  systemctl_logged restart zot
+  enable_units+=(zot)
+  restart_units+=(zot)
 else
-  systemctl_logged_optional disable zot
-  systemctl_logged_optional stop zot
+  disable_units+=(zot)
+  stop_units+=(zot)
 fi
 
-systemctl_logged enable containerd
-systemctl_logged restart containerd
-systemctl_logged enable nstance-agent
-systemctl_logged restart nstance-agent
-
 if netsy_enabled; then
-  systemctl_logged enable netsy
-  systemctl_logged restart netsy
+  enable_units+=(netsy)
+  restart_units+=(netsy)
 fi
 
 if kube_apiserver_enabled; then
-  systemctl_logged enable kube-apiserver
-  systemctl_logged restart kube-apiserver
+  enable_units+=(kube-apiserver)
+  restart_units+=(kube-apiserver)
 fi
 
 if kube_controller_manager_enabled; then
-  systemctl_logged enable kube-controller-manager
+  enable_units+=(kube-controller-manager)
 fi
 
 if kube_scheduler_enabled; then
-  systemctl_logged enable kube-scheduler
+  enable_units+=(kube-scheduler)
 fi
 
 if kube2iam_enabled; then
-  systemctl_logged enable kube2iam
-  systemctl_logged restart kube2iam
+  enable_units+=(kube2iam)
+  restart_units+=(kube2iam)
 else
-  systemctl_logged_optional disable kube2iam
-  systemctl_logged_optional stop kube2iam
+  disable_units+=(kube2iam)
+  stop_units+=(kube2iam)
 fi
 
-systemctl_logged enable kubelet
+log "restarting systemd services..."
+systemctl_logged daemon-reload
+if [ "${#disable_units[@]}" -gt 0 ]; then
+  systemctl_logged_optional disable "${disable_units[@]}"
+fi
+if [ "${#stop_units[@]}" -gt 0 ]; then
+  systemctl_logged_optional stop "${stop_units[@]}"
+fi
+systemctl_logged enable "${enable_units[@]}"
+systemctl_logged start "${start_units[@]}"
+systemctl_logged restart "${restart_units[@]}"
 log "done restarting systemd services."
