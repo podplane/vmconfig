@@ -79,6 +79,7 @@ INSTANCE_NETDEV=$(quote_env_value "$instance_netdev")
 INSTANCE_HOSTNAME=$(quote_env_value "$instance_hostname")
 INSTANCE_FQDN=$(quote_env_value "$instance_fqdn")
 EOF
+[ -s "${PODPLANE_ROOT:-}$tmp_detected" ] || fatal "failed to write non-empty ${DETECTED_ENV}"
 set_file_permissions 0600 root root "$tmp_detected"
 
 # write mutable.env file
@@ -121,10 +122,12 @@ REGISTRY_ACCESS_KEY_ID=$(quote_env_value "${REGISTRY_ACCESS_KEY_ID:-}")
 REGISTRY_SECRET_ACCESS_KEY=$(quote_env_value "${REGISTRY_SECRET_ACCESS_KEY:-}")
 AWS_S3_USE_PATH_STYLE=$(quote_env_value "${AWS_S3_USE_PATH_STYLE:-}")
 EOF
+[ -s "${PODPLANE_ROOT:-}$tmp_mutable" ] || fatal "failed to write non-empty ${MUTABLE_ENV}"
 set_file_permissions 0600 root root "$tmp_mutable"
 
 # finalise
 printf 'completed_at=%s\n' "$(date -u +%FT%TZ)" > "${PODPLANE_ROOT:-}$tmp_done"
+[ -s "${PODPLANE_ROOT:-}$tmp_done" ] || fatal "failed to write non-empty ${BOOTSTRAP_DONE}"
 set_file_permissions 0600 root root "$tmp_done"
 mv "${PODPLANE_ROOT:-}$tmp_detected" "${PODPLANE_ROOT:-}$DETECTED_ENV"
 mv "${PODPLANE_ROOT:-}$tmp_mutable" "${PODPLANE_ROOT:-}$MUTABLE_ENV"

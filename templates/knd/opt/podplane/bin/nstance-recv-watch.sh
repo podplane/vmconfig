@@ -7,6 +7,9 @@ set -euo pipefail
 # Process nstance-agent receive output.
 
 INSTALLED_VMCONFIG_MANIFEST="/opt/podplane/share/vmconfig-installed.json"
+BOOTSTRAP_DONE="/opt/podplane/bootstrap.done"
+DETECTED_ENV="/opt/podplane/etc/detected.env"
+MUTABLE_ENV="/opt/podplane/etc/mutable.env"
 NSTANCE_BASE="/opt/nstance-agent"
 NSTANCE_RECV="${NSTANCE_BASE}/recv"
 LAST_WRITE_FILES_FILE="${NSTANCE_RECV}/write-files.last"
@@ -69,10 +72,17 @@ echo "Start Time: ${START_TIME}"
 if [ -f "${NSTANCE_RECV}/mutable.env" ]; then
   LAST_MODIFIED=$(stat -c %Y "${NSTANCE_RECV}/mutable.env")999999999
   if [ "${LAST_MODIFIED}" -ge "${LAST_START_TIME}" ]; then
+    if [ ! -f "$BOOTSTRAP_DONE" ]; then
+      fatal "bootstrap has not completed"
+    fi
+    if [ -f "$BOOTSTRAP_DONE" ] && { [ ! -s "$DETECTED_ENV" ] || [ ! -s "$MUTABLE_ENV" ]; }; then
+      fatal "bootstrap marker exists but required env files are missing or empty"
+    fi
+
     echo "Updating mutable.env..."
     /opt/podplane/bin/update-mutable-env.sh \
       "${NSTANCE_RECV}/mutable.env" \
-      "/opt/podplane/etc/mutable.env"
+      "$MUTABLE_ENV"
   fi
 fi
 
@@ -157,9 +167,9 @@ if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
   # shellcheck source=/dev/null
   source /opt/podplane/etc/user-data.env
   # shellcheck source=/dev/null
-  source /opt/podplane/etc/detected.env
+  source "$DETECTED_ENV"
   # shellcheck source=/dev/null
-  source /opt/podplane/etc/mutable.env
+  source "$MUTABLE_ENV"
   case "${TELEMETRY_ENABLED:-false}" in
     true|false) ;;
     *) fatal "TELEMETRY_ENABLED must be true or false" ;;

@@ -57,6 +57,10 @@ fi
 
 # environment ----------------------------------------------------------------
 
+if [ -f "$BOOTSTRAP_DONE" ] && { [ ! -s "$DETECTED_ENV" ] || [ ! -s "$MUTABLE_ENV" ]; }; then
+  fatal "bootstrap marker exists but required env files are missing or empty"
+fi
+
 if [ ! -f "$BOOTSTRAP_DONE" ]; then
   log "invoking ${BOOTSTRAP_SCRIPT}"
   "$BOOTSTRAP_SCRIPT"
