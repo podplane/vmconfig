@@ -148,6 +148,15 @@ type OsSource struct {
 type Sources struct {
 	OS           OsSource
 	Dependencies map[string]DownloadGroup
+	Images       []ImageSource
+}
+
+// ImageSource describes a runtime container image required by vmconfig itself,
+// such as the CRI pod sandbox image used by containerd before any component
+// pods can start.
+type ImageSource struct {
+	Name  string
+	Image string
 }
 
 // ----- manifest (output) -----
@@ -197,6 +206,16 @@ type DependencyOutput struct {
 	Cached    bool     `json:"cached,omitempty"`
 }
 
+// ImageOutput is one resolved runtime container image under vmconfig.images.
+type ImageOutput struct {
+	Image    string `json:"image"`
+	Digest   string `json:"digest"`
+	Size     int64  `json:"size"`
+	Platform string `json:"platform,omitempty"`
+	Index    string `json:"index,omitempty"`
+	Cached   bool   `json:"cached,omitempty"`
+}
+
 // ManifestOS is the `vmconfig.os` object.
 type ManifestOS struct {
 	Name  string   `json:"name"`
@@ -214,6 +233,7 @@ type ManifestVMConfig struct {
 	Kind         string                       `json:"kind"`
 	OS           ManifestOS                   `json:"os"`
 	Dependencies map[string]*DependencyOutput `json:"dependencies"`
+	Images       []ImageOutput                `json:"images,omitempty"`
 }
 
 // Manifest is the on-disk schema for vmconfig/manifests/<kind>.<os>.<arch>.json.

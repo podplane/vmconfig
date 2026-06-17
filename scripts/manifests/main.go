@@ -59,6 +59,19 @@ var (
 
 // ----- generic helpers -----
 
+// commandOutput runs a command and returns stdout with stderr folded into any
+// execution error.
+func commandOutput(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
+	}
+	return string(out), nil
+}
+
 func fetchText(url string) (string, error) {
 	res, err := http.Get(url)
 	if err != nil {
@@ -1149,6 +1162,11 @@ func processGroup(groupName string, group DownloadGroup) error {
 			return err
 		}
 		sharedVersion = v
+		if groupName == "containerd" {
+			if err := verifyContainerdSandboxImage(sharedVersion); err != nil {
+				return err
+			}
+		}
 	}
 	sharedManifestVersion := strings.TrimPrefix(sharedVersion, "v")
 
@@ -1357,7 +1375,12 @@ func run() error {
 		return err
 	}
 
-	// Phase 3: vmconfig package stubs (one per VM kind). These are
+	// Phase 3: runtime container images required by vmconfig itself.
+	if err := processImages(); err != nil {
+		return err
+	}
+
+	// Phase 4: vmconfig package stubs (one per VM kind). These are
 	// placeholders filled in by the release pipeline; they are written here
 	// so the manifest schema is complete from the moment a base file is
 	// created.
@@ -1365,7 +1388,7 @@ func run() error {
 		return err
 	}
 
-	// Phase 4: dependencies, group by group, alphabetically for deterministic
+	// Phase 5: dependencies, group by group, alphabetically for deterministic
 	// console output.
 	groupNames := make([]string, 0, len(sources.Dependencies))
 	for name := range sources.Dependencies {

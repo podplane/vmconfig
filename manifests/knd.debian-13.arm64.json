@@ -111,6 +111,15 @@
         "digest": "sha256:f56af10ca56ef3c42b8a75f2648f2315f2480489d598bcfc79c215509615b24c",
         "size": 73072942
       }
-    }
+    },
+    "images": [
+      {
+        "image": "registry.k8s.io/pause:3.10.2",
+        "digest": "sha256:a433214620b407678934ebd69690a9ed6066247231eacfba181fab20dbc3dbf1",
+        "size": 265534,
+        "platform": "linux/arm64",
+        "index": "sha256:f548e0e8e3dc1896ca956272154dde3314e8cc4fde0a57577ee9fa1c63f5baf4"
+      }
+    ]
   }
 }

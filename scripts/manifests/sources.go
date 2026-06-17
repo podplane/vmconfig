@@ -197,4 +197,9 @@ var sources = Sources{
 			Files:        []FileEntry{{Name: "zot", Kind: allKinds}},
 		},
 	},
+	Images: []ImageSource{
+		// note: the pause image may change with each containerd version
+		// e.g. https://github.com/containerd/containerd/blob/v2.3.1/internal/cri/config/config.go#L76
+		{Name: "pod-sandbox", Image: "registry.k8s.io/pause:3.10.2"},
+	},
 }
