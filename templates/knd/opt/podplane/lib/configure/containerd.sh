@@ -38,14 +38,24 @@ tmp="${containerd_config}.tmp"
 awk -v sandbox_image="$sandbox_image" '
   /^  \[plugins\."io\.containerd\.cri\.v1\.images"\]$/ {
     print
-    print "    sandbox_image = \"" sandbox_image "\""
+    print "    [plugins.\"io.containerd.cri.v1.images\".pinned_images]"
+    print "      sandbox = \"" sandbox_image "\""
     in_images = 1
+    in_pinned_images = 0
     next
   }
   /^  \[plugins\./ {
     in_images = 0
+    in_pinned_images = 0
+  }
+  in_images && /^    \[plugins\."io\.containerd\.cri\.v1\.images"\.pinned_images\]$/ {
+    in_pinned_images = 1
+    next
   }
   in_images && /^[[:space:]]*sandbox_image[[:space:]]*=/ {
+    next
+  }
+  in_images && in_pinned_images && /^[[:space:]]*sandbox[[:space:]]*=/ {
     next
   }
   { print }
