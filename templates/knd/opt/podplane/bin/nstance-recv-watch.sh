@@ -29,6 +29,7 @@ declare -A ALLOWED_RECEIVED_FILES=(
   [service-accounts.pub]=1
   [service-accounts.key]=1
   [containerd.client.crt]=1
+  [front-proxy.client.crt]=1
   [kube-apiserver.client.crt]=1
   [kube-apiserver.server.crt]=1
   [kube2iam.client.crt]=1
@@ -150,6 +151,10 @@ for file in "${NSTANCE_BASE}"/keys/*.key; do
   if [ "$DEST_SERVICE" = "registry" ]; then
     # The registry service runs as the zot user/group.
     DEST_GROUP="zot"
+  elif [ "$KEY_FILE" = "front-proxy.client.key" ]; then
+    # The front-proxy client cert is used by kube-apiserver for aggregated API proxying
+    DEST_SERVICE="kube-apiserver"
+    DEST_GROUP="kube-apiserver"
   fi
   DEST_DIR="/opt/key/${DEST_SERVICE}"
 

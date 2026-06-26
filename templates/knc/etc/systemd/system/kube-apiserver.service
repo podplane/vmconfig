@@ -7,6 +7,8 @@ ConditionPathExists=/opt/crt/kube-apiserver.client.crt
 ConditionPathExists=/opt/key/kube-apiserver/kube-apiserver.client.key
 ConditionPathExists=/opt/crt/kube-apiserver.server.crt
 ConditionPathExists=/opt/key/kube-apiserver/kube-apiserver.server.key
+ConditionPathExists=/opt/crt/front-proxy.client.crt
+ConditionPathExists=/opt/key/kube-apiserver/front-proxy.client.key
 Wants=netsy.service
 After=netsy.service
 [Service]

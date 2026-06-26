@@ -20,6 +20,8 @@ tlsPrivateKeyFile='/opt/key/kube-apiserver/kube-apiserver.server.key'
 kubeletClientCertificate='/opt/crt/kube-apiserver.client.crt'
 kubeletClientKey='/opt/key/kube-apiserver/kube-apiserver.client.key'
 kubeletCertificateAuthority='/opt/crt/ca.crt'
+frontProxyClientCertificate='/opt/crt/front-proxy.client.crt'
+frontProxyClientKey='/opt/key/kube-apiserver/front-proxy.client.key'
 allFiles=(
   "${serviceAccountKeyFile}"
   "${serviceAccountSigningKeyFile}"
@@ -32,6 +34,8 @@ allFiles=(
   "${kubeletClientCertificate}"
   "${kubeletClientKey}"
   "${kubeletCertificateAuthority}"
+  "${frontProxyClientCertificate}"
+  "${frontProxyClientKey}"
 )
 for file in "${allFiles[@]}"; do
   if [ ! -f "${file}" ]; then
@@ -112,6 +116,16 @@ args=(
   "--kubelet-client-certificate=${kubeletClientCertificate}"
   "--kubelet-client-key=${kubeletClientKey}"
   "--kubelet-certificate-authority=${kubeletCertificateAuthority}"
+
+  # Certs and headers for aggregated API servers
+  "--proxy-client-cert-file=${frontProxyClientCertificate}"
+  "--proxy-client-key-file=${frontProxyClientKey}"
+  '--requestheader-allowed-names=front-proxy-client'
+  "--requestheader-client-ca-file=${clientCaFile}"
+  '--requestheader-extra-headers-prefix=X-Remote-Extra-'
+  '--requestheader-group-headers=X-Remote-Group'
+  '--requestheader-uid-headers=X-Remote-Uid'
+  '--requestheader-username-headers=X-Remote-User'
 
   #
   # Kubelet connection settings - use IPs instead of Hostnames to connect
