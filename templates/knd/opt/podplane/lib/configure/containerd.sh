@@ -31,7 +31,7 @@ sandbox_image="$sandbox_images"
 
 if [ "${REGISTRY_ENABLED:-true}" = true ]; then
   require_nonempty REGISTRY_HOSTNAME
-  sandbox_image="${REGISTRY_HOSTNAME}/${sandbox_image}"
+  sandbox_image="${REGISTRY_HOSTNAME}/mirror/${sandbox_image}"
 fi
 
 tmp="${containerd_config}.tmp"
