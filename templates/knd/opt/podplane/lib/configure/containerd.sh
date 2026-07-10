@@ -29,8 +29,7 @@ case "$sandbox_count" in
 esac
 sandbox_image="$sandbox_images"
 
-if [ "${REGISTRY_ENABLED:-true}" = true ]; then
-  require_nonempty REGISTRY_HOSTNAME
+if [ "${REGISTRY_ENABLED:-true}" = true ] && [ -n "${REGISTRY_HOSTNAME:-}" ]; then
   sandbox_image="${REGISTRY_HOSTNAME}/mirror/${sandbox_image}"
 fi
 

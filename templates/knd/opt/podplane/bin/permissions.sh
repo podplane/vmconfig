@@ -197,6 +197,7 @@ ensure_permissions   0700 root                    root                    "/opt/
 ensure_permissions   0755 root                    root                    "/opt/podplane/lib"
 ensure_permissions   0755 root                    root                    "/opt/podplane/lib/configure"
 ensure_permissions   0755 root                    root                    "/opt/podplane/share"
+ensure_permissions   0755 root                    root                    "/opt/podplane/share/defaults"
 ensure_permissions   0700 root                    root                    "/opt/bin"
 ensure_permissions   0750 root                    podplane                "/opt/crt"
 ensure_permissions   0750 root                    podplane                "/opt/pub"

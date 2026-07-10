@@ -15,6 +15,8 @@ set -euo pipefail
 USER_DATA_ENV="/opt/podplane/etc/user-data.env"
 DETECTED_ENV="/opt/podplane/etc/detected.env"
 MUTABLE_ENV="/opt/podplane/etc/mutable.env"
+BOOTSTRAP_ENV="/opt/podplane/etc/bootstrap.env"
+DEFAULT_MUTABLE_ENV="/opt/podplane/share/defaults/mutable.env"
 BOOTSTRAP_DONE="/opt/podplane/bootstrap.done"
 INSTALLED_VMCONFIG_MANIFEST="/opt/podplane/share/vmconfig-installed.json"
 
@@ -26,6 +28,7 @@ source "${SCRIPT_DIR}/../lib/helpers.sh"
 # preflight checks
 [ "$(id -u)" = "0" ] || fatal "must be run as root"
 [ -f "${PODPLANE_ROOT:-}$USER_DATA_ENV" ] || fatal "missing ${USER_DATA_ENV}"
+[ -f "${PODPLANE_ROOT:-}$DEFAULT_MUTABLE_ENV" ] || fatal "missing ${DEFAULT_MUTABLE_ENV}"
 [ -f "${PODPLANE_ROOT:-}$INSTALLED_VMCONFIG_MANIFEST" ] || fatal "missing ${INSTALLED_VMCONFIG_MANIFEST}"
 if [ -f "${PODPLANE_ROOT:-}$BOOTSTRAP_DONE" ]; then
   log "${BOOTSTRAP_DONE} already exists; nothing to do."
@@ -67,7 +70,7 @@ instance_fqdn="${INSTANCE_FQDN:-$(derive_instance_fqdn "$instance_hostname")}"
 tmp_detected="${DETECTED_ENV}.tmp"
 tmp_mutable="${MUTABLE_ENV}.tmp"
 tmp_done="${BOOTSTRAP_DONE}.tmp"
-rm -f "${PODPLANE_ROOT:-}$tmp_detected" "${PODPLANE_ROOT:-}$tmp_mutable" "${PODPLANE_ROOT:-}$tmp_done"
+rm -f "${PODPLANE_ROOT:-}$tmp_detected" "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" "${PODPLANE_ROOT:-}$tmp_mutable" "${PODPLANE_ROOT:-}$tmp_done"
 log "writing ${DETECTED_ENV}..."
 cat > "${PODPLANE_ROOT:-}$tmp_detected" <<EOF
 VMCONFIG_KIND=$(quote_env_value "${VMCONFIG_KIND:-}")
@@ -82,45 +85,23 @@ EOF
 [ -s "${PODPLANE_ROOT:-}$tmp_detected" ] || fatal "failed to write non-empty ${DETECTED_ENV}"
 set_file_permissions 0600 root root "$tmp_detected"
 
+# write bootstrap.env file
+# this is used to bootstrap the initial mutable.env file with a subset of user-data.env vars
+log "writing ${BOOTSTRAP_ENV}..."
+grep -E '^SSH_AUTHORIZED_KEY=' \
+  "${PODPLANE_ROOT:-}$USER_DATA_ENV" > "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV"
+[ -s "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" ] || fatal "failed to write non-empty ${BOOTSTRAP_ENV}"
+set_file_permissions 0600 root root "$BOOTSTRAP_ENV"
+
 # write mutable.env file
+# layer the bootstrap.env file over the default mutable.env file to bootstrap the first mutable.env file version
 log "writing ${MUTABLE_ENV}..."
-cat > "${PODPLANE_ROOT:-}$tmp_mutable" <<EOF
-SSH_AUTHORIZED_KEY=$(quote_env_value "${SSH_AUTHORIZED_KEY:-}")
-KUBE_API_PUBLIC_HOSTNAME=$(quote_env_value "${KUBE_API_PUBLIC_HOSTNAME:-}")
-KUBE_API_PORT=$(quote_env_value "${KUBE_API_PORT:-6443}")
-KUBE_API_INTERNAL_LB_HOSTNAME=$(quote_env_value "${KUBE_API_INTERNAL_LB_HOSTNAME:-}")
-NSTANCE_SERVER_REGISTRATION_ADDR=$(quote_env_value "${NSTANCE_SERVER_REGISTRATION_ADDR:-}")
-NSTANCE_SERVER_AGENT_ADDR=$(quote_env_value "${NSTANCE_SERVER_AGENT_ADDR:-}")
-KUBE_API_ETCD_SERVERS=$(quote_env_value "${KUBE_API_ETCD_SERVERS:-}")
-OIDC_ISSUER=$(quote_env_value "${OIDC_ISSUER:-}")
-OIDC_CA_CERT=$(quote_env_value "${OIDC_CA_CERT:-}")
-KUBE_LOG_LEVEL=$(quote_env_value "${KUBE_LOG_LEVEL:-2}")
-NETSY_BUCKET=$(quote_env_value "${NETSY_BUCKET:-}")
-NETSY_ENDPOINT=$(quote_env_value "${NETSY_ENDPOINT:-}")
-NETSY_REGION=$(quote_env_value "${NETSY_REGION:-}")
-NETSY_ASSUME_ROLE=$(quote_env_value "${NETSY_ASSUME_ROLE:-}")
-NETSY_ACCESS_KEY_ID=$(quote_env_value "${NETSY_ACCESS_KEY_ID:-}")
-NETSY_SECRET_ACCESS_KEY=$(quote_env_value "${NETSY_SECRET_ACCESS_KEY:-}")
-TELEMETRY_ENABLED=$(quote_env_value "${TELEMETRY_ENABLED:-false}")
-TELEMETRY_LOG_SERVICES=$(quote_env_value "${TELEMETRY_LOG_SERVICES:-}")
-TELEMETRY_LOG_CLOUDINIT=$(quote_env_value "${TELEMETRY_LOG_CLOUDINIT:-true}")
-TELEMETRY_S3_BUCKET=$(quote_env_value "${TELEMETRY_S3_BUCKET:-}")
-TELEMETRY_S3_ENDPOINT=$(quote_env_value "${TELEMETRY_S3_ENDPOINT:-}")
-TELEMETRY_S3_REGION=$(quote_env_value "${TELEMETRY_S3_REGION:-}")
-TELEMETRY_S3_ASSUME_ROLE=$(quote_env_value "${TELEMETRY_S3_ASSUME_ROLE:-}")
-TELEMETRY_S3_ACCESS_KEY_ID=$(quote_env_value "${TELEMETRY_S3_ACCESS_KEY_ID:-}")
-TELEMETRY_S3_SECRET_ACCESS_KEY=$(quote_env_value "${TELEMETRY_S3_SECRET_ACCESS_KEY:-}")
-TELEMETRY_OTLP_ENDPOINT=$(quote_env_value "${TELEMETRY_OTLP_ENDPOINT:-}")
-REGISTRY_ENABLED=$(quote_env_value "${REGISTRY_ENABLED:-true}")
-REGISTRY_BUCKET=$(quote_env_value "${REGISTRY_BUCKET:-}")
-REGISTRY_HOSTNAME=$(quote_env_value "${REGISTRY_HOSTNAME:-}")
-REGISTRY_ENDPOINT=$(quote_env_value "${REGISTRY_ENDPOINT:-}")
-REGISTRY_REGION=$(quote_env_value "${REGISTRY_REGION:-}")
-REGISTRY_ASSUME_ROLE=$(quote_env_value "${REGISTRY_ASSUME_ROLE:-}")
-REGISTRY_ACCESS_KEY_ID=$(quote_env_value "${REGISTRY_ACCESS_KEY_ID:-}")
-REGISTRY_SECRET_ACCESS_KEY=$(quote_env_value "${REGISTRY_SECRET_ACCESS_KEY:-}")
-AWS_S3_USE_PATH_STYLE=$(quote_env_value "${AWS_S3_USE_PATH_STYLE:-}")
-EOF
+cp "${PODPLANE_ROOT:-}$DEFAULT_MUTABLE_ENV" "${PODPLANE_ROOT:-}$tmp_mutable"
+UPDATE_MUTABLE_ENV_REFRESH_HOSTS=false \
+  "${SCRIPT_DIR}/update-mutable-env.sh" \
+  "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" \
+  "${PODPLANE_ROOT:-}$tmp_mutable" \
+  true
 [ -s "${PODPLANE_ROOT:-}$tmp_mutable" ] || fatal "failed to write non-empty ${MUTABLE_ENV}"
 set_file_permissions 0600 root root "$tmp_mutable"
 

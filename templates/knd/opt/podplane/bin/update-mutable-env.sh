@@ -3,8 +3,10 @@ set -euo pipefail
 
 # This script validates a delivered mutable.env file, merges it into the
 # VM-local /opt/podplane/etc/mutable.env, and optionally deletes the source
-# file. The destination mutable.env is the allowlist: bootstrap.sh seeds every
-# key that this VM kind is allowed to mutate later.
+# file. /opt/podplane/share/defaults/mutable.env defines the valid mutable.env
+# keys and default values.
+
+MUTABLE_DEFAULTS_ENV="${PODPLANE_ROOT:-}/opt/podplane/share/defaults/mutable.env"
 
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 <path_to_source_env_file> <path_to_dest_env_file> (<delete_source_env_file=false>)"
@@ -16,6 +18,11 @@ DEST_ENV_FILE="$2"
 DELETE_SOURCE_ENV_FILE=false
 if [ "${3:-}" = "true" ] || [ "${3:-}" = "1" ]; then
   DELETE_SOURCE_ENV_FILE=true
+fi
+
+if [ ! -f "$MUTABLE_DEFAULTS_ENV" ]; then
+  echo "Mutable defaults env file not found: $MUTABLE_DEFAULTS_ENV"
+  exit 1
 fi
 
 if [ ! -f "$SOURCE_ENV_FILE" ]; then
@@ -51,7 +58,7 @@ load_env_file_to_map() {
   local -n map_ref="$2"
   local key value
 
-  while IFS='=' read -r key value; do
+  while IFS='=' read -r key value || [ -n "$key" ] || [ -n "$value" ]; do
     [[ $key =~ ^#.*$ || -z $key ]] && continue
 
     if [[ ! "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -77,6 +84,11 @@ quote_env_value() {
   printf "'%s'" "$value"
 }
 
+declare -A ALLOWED_ENV_KEYS
+echo -n "Loading mutable defaults env file ${MUTABLE_DEFAULTS_ENV}... "
+load_env_file_to_map "$MUTABLE_DEFAULTS_ENV" ALLOWED_ENV_KEYS
+echo "Done."
+
 declare -A ENV_MAP
 echo -n "Loading existing mutable env file ${DEST_ENV_FILE}... "
 load_env_file_to_map "$DEST_ENV_FILE" ENV_MAP
@@ -88,8 +100,8 @@ load_env_file_to_map "$SOURCE_ENV_FILE" NEW_ENV_MAP
 echo "Done."
 
 for key in "${!NEW_ENV_MAP[@]}"; do
-  if [[ ! -v "ENV_MAP[$key]" ]]; then
-    echo "Key '$key' is not present in ${DEST_ENV_FILE} and cannot be updated. Exiting..."
+  if [[ ! -v "ALLOWED_ENV_KEYS[$key]" ]]; then
+    echo "Key '$key' is not in the mutable env contract and cannot be updated. Exiting..."
     exit 1
   fi
 done
@@ -107,14 +119,25 @@ fi
 echo "Done."
 
 echo -n "Writing merged env vars to ${DEST_ENV_FILE}... "
+DEST_ENV_TMP_FILE="${DEST_ENV_FILE}.tmp"
+rm -f "$DEST_ENV_TMP_FILE"
 {
-  for key in "${!ENV_MAP[@]}"; do
-    printf '%s=%s\n' "$key" "$(quote_env_value "${ENV_MAP[$key]}")"
+  for key in "${!ALLOWED_ENV_KEYS[@]}"; do
+    value="${ALLOWED_ENV_KEYS[$key]}"
+    if [[ -v "ENV_MAP[$key]" ]]; then
+      value="${ENV_MAP[$key]}"
+    fi
+    printf '%s=%s\n' "$key" "$(quote_env_value "$value")"
   done | sort
-} > "$DEST_ENV_FILE"
+} > "$DEST_ENV_TMP_FILE"
+chmod 0600 "$DEST_ENV_TMP_FILE"
+if [ "$(id -u)" = "0" ]; then
+  chown root:root "$DEST_ENV_TMP_FILE"
+fi
+mv "$DEST_ENV_TMP_FILE" "$DEST_ENV_FILE"
 echo "Done."
 
-if [ -x /opt/podplane/lib/configure/hosts.sh ]; then
+if [ "${UPDATE_MUTABLE_ENV_REFRESH_HOSTS:-true}" != false ] && [ -x /opt/podplane/lib/configure/hosts.sh ]; then
   echo -n "Refreshing managed hosts entries... "
   /opt/podplane/lib/configure/hosts.sh
   echo "Done."

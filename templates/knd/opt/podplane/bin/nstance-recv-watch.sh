@@ -166,6 +166,7 @@ done
 # the previous one, and if there's nothing queued, run the configure.sh
 # script and then restart services.
 if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
+  containerd_config_hash="$(sha256sum /etc/containerd/config.toml | awk '{print $1}')"
   echo "Running configure.sh..."
   /opt/podplane/bin/configure.sh
 
@@ -188,8 +189,12 @@ if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
     *) fatal "REGISTRY_ENABLED must be true or false" ;;
   esac
 
-  echo "Restarting services directly (excluding containerd)..."
+  echo "Restarting services directly..."
   systemctl daemon-reload
+  updated_containerd_config_hash="$(sha256sum /etc/containerd/config.toml | awk '{print $1}')"
+  if [ "$updated_containerd_config_hash" != "$containerd_config_hash" ]; then
+    restart_service containerd
+  fi
   if fluent_bit_enabled; then
     restart_service fluent-bit
   else
@@ -198,6 +203,9 @@ if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
   fi
   if zot_enabled; then
     restart_service zot
+  else
+    systemctl disable zot || true
+    systemctl stop zot || true
   fi
   if netsy_enabled; then
     restart_service netsy

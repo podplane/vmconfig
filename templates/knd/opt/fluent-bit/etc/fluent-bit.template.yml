@@ -7,8 +7,11 @@ service:
   log_level: info
   # disable http server
   http_server: false
-  # configure storage for state persistence
-  storage.path: /var/lib/fluent-bit # Persist state (e.g. journal cursor)
+  # persist queued records across restarts and destination changes
+  storage.path: /var/lib/fluent-bit/storage
+  storage.sync: full
+  storage.checksum: true
+  storage.backlog.mem_limit: 64M
   # do not capture metrics
   storage.metrics: false
 
@@ -18,6 +21,9 @@ pipeline:
     # read journald logs from systemd services
     - name: systemd
       tag: systemd.*
+      db: /var/lib/fluent-bit/systemd.db
+      db.sync: full
+      storage.type: filesystem
       systemd_filter:
         - _SYSTEMD_UNIT=first-boot-env.service
         - _SYSTEMD_UNIT=cron.service
@@ -31,7 +37,7 @@ pipeline:
         - _SYSTEMD_UNIT=kube-scheduler.service
         - _SYSTEMD_UNIT=kubelet.service
         - _SYSTEMD_UNIT=zot.service
-      read_from_tail: true
+      read_from_tail: false
     # END TELEMETRY_SYSTEMD_INPUT
 
     # BEGIN TELEMETRY_LOG_CLOUDINIT_INPUT
@@ -39,6 +45,9 @@ pipeline:
     - name: tail
       tag: cloudinit.*
       path: /var/log/cloud-init.log
+      db: /var/lib/fluent-bit/cloud-init.db
+      db.sync: full
+      storage.type: filesystem
       read_from_head: true
       refresh_interval: 30 # how often to check for file changes (seconds)
     # END TELEMETRY_LOG_CLOUDINIT_INPUT
@@ -71,7 +80,7 @@ pipeline:
       # upload_timeout: 10s
       # total_file_size: 1M
       use_put_object: true
-      store_dir: /tmp/fluent-bit/s3
+      store_dir: /var/lib/fluent-bit/s3
       bucket: ${TELEMETRY_S3_BUCKET}
       endpoint: ${TELEMETRY_S3_ENDPOINT}
       region: ${TELEMETRY_S3_REGION}
@@ -80,6 +89,7 @@ pipeline:
       json_date_key: date
       json_date_format: iso8601
       role_arn: ${TELEMETRY_S3_ASSUME_ROLE}
+      retry_limit: no_limits
     # END TELEMETRY_S3_OUTPUT
 
     # BEGIN TELEMETRY_OTLP_OUTPUT
@@ -90,4 +100,18 @@ pipeline:
       port: ${TELEMETRY_OTLP_PORT}
       logs_uri: ${TELEMETRY_OTLP_LOGS_URI}
       tls: ${TELEMETRY_OTLP_TLS}
+      retry_limit: no_limits
+      storage.total_limit_size: 500M
     # END TELEMETRY_OTLP_OUTPUT
+
+    # BEGIN TELEMETRY_BUFFER_OUTPUT
+    # Keep records queued locally until Nstance supplies a real destination.
+    - name: http
+      match: "*"
+      host: 127.0.0.1
+      port: 1
+      uri: /
+      format: json
+      retry_limit: no_limits
+      storage.total_limit_size: 200M
+    # END TELEMETRY_BUFFER_OUTPUT

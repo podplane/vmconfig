@@ -27,6 +27,8 @@ HELPERS_SCRIPT="/opt/podplane/lib/helpers.sh"
 
 # shellcheck source=/dev/null
 source "$HELPERS_SCRIPT"
+# shellcheck source=/dev/null
+source /opt/podplane/lib/features.sh
 
 # preflight ------------------------------------------------------------------
 
@@ -111,12 +113,16 @@ check_tcp_connectivity "nstance agent server" "$NSTANCE_SERVER_AGENT_ADDR"
 log "generating component env files..."
 "${CONFIGURE_COMPONENT_DIR}/hosts.sh"
 "${CONFIGURE_COMPONENT_DIR}/nstance-agent.sh"
-"${CONFIGURE_COMPONENT_DIR}/fluent-bit.sh"
+if fluent_bit_enabled; then
+  "${CONFIGURE_COMPONENT_DIR}/fluent-bit.sh"
+fi
 "${CONFIGURE_COMPONENT_DIR}/containerd.sh"
-"${CONFIGURE_COMPONENT_DIR}/zot.sh"
+if zot_enabled; then
+  "${CONFIGURE_COMPONENT_DIR}/zot.sh"
+fi
 "${CONFIGURE_COMPONENT_DIR}/kube2iam.sh"
 "${CONFIGURE_COMPONENT_DIR}/kube.sh"
-if [ "$VMCONFIG_KIND" = "knc" ]; then
+if netsy_enabled; then
   "${CONFIGURE_COMPONENT_DIR}/netsy.sh"
 fi
 

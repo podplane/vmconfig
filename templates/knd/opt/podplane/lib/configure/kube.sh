@@ -82,5 +82,5 @@ for kubeconfig in \
   /opt/kube-scheduler/etc/kubeconfig
 do
   [ -f "${PODPLANE_ROOT:-}$kubeconfig" ] || continue
-  sed -E -i "s#server: https://localhost:[0-9]+#server: https://localhost:${KUBE_API_PORT}#" "${PODPLANE_ROOT:-}$kubeconfig"
+  sed -E -i "s#server: https://([^:]+):[0-9]+#server: https://\1:${KUBE_API_PORT}#" "${PODPLANE_ROOT:-}$kubeconfig"
 done

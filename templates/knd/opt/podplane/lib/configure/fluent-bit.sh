@@ -46,6 +46,7 @@ for service in "${services[@]}"; do
 done
 include_s3=false
 include_otlp=false
+include_buffer_output=false
 telemetry_otlp_host=""
 telemetry_otlp_port=""
 telemetry_otlp_logs_uri="/v1/logs"
@@ -76,7 +77,7 @@ if [ "${TELEMETRY_ENABLED:-false}" = true ]; then
     [ -n "$telemetry_otlp_host" ] || fatal "TELEMETRY_OTLP_ENDPOINT must include a host"
   fi
   if [ "$include_s3" != true ] && [ "$include_otlp" != true ]; then
-    fatal "TELEMETRY_ENABLED=true requires TELEMETRY_S3_BUCKET or TELEMETRY_OTLP_ENDPOINT"
+    include_buffer_output=true
   fi
   if [ "$allowed_units" = "|" ] && [ "$include_cloudinit" != true ]; then
     fatal "TELEMETRY_ENABLED=true requires TELEMETRY_LOG_SERVICES or TELEMETRY_LOG_CLOUDINIT=true"
@@ -118,6 +119,7 @@ awk \
   -v include_cloudinit="$include_cloudinit" \
   -v include_s3="$include_s3" \
   -v include_otlp="$include_otlp" \
+  -v include_buffer_output="$include_buffer_output" \
   '
     /# BEGIN TELEMETRY_SYSTEMD_INPUT/ { in_systemd=1; if (include_systemd != "true") next }
     /# END TELEMETRY_SYSTEMD_INPUT/ { if (include_systemd != "true") { in_systemd=0; next } }
@@ -137,6 +139,9 @@ awk \
     /# BEGIN TELEMETRY_OTLP_OUTPUT/ { in_otlp=1; if (include_otlp != "true") next }
     /# END TELEMETRY_OTLP_OUTPUT/ { if (include_otlp != "true") { in_otlp=0; next } }
     in_otlp && include_otlp != "true" { next }
+    /# BEGIN TELEMETRY_BUFFER_OUTPUT/ { in_buffer_output=1; if (include_buffer_output != "true") next }
+    /# END TELEMETRY_BUFFER_OUTPUT/ { if (include_buffer_output != "true") { in_buffer_output=0; next } }
+    in_buffer_output && include_buffer_output != "true" { next }
     { print }
   ' "${PODPLANE_ROOT:-}$template" > "${PODPLANE_ROOT:-}$tmp"
 set_file_permissions 0600 fluent-bit fluent-bit "$tmp"

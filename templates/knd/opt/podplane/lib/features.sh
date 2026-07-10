@@ -10,12 +10,14 @@ fluent_bit_enabled() {
 
 # zot_enabled returns true when the local registry service should run.
 zot_enabled() {
-  [ "${REGISTRY_ENABLED:-true}" = true ]
+  [ "${REGISTRY_ENABLED:-true}" = true ] &&
+    [ -n "${REGISTRY_HOSTNAME:-}" ] &&
+    [ -n "${REGISTRY_BUCKET:-}" ]
 }
 
 # netsy_enabled returns true on control-plane nodes that run Netsy.
 netsy_enabled() {
-  [ "${VMCONFIG_KIND:-}" = "knc" ]
+  [ "${VMCONFIG_KIND:-}" = "knc" ] && [ -n "${NETSY_BUCKET:-}" ]
 }
 
 # kube_apiserver_enabled returns true on control-plane nodes.
