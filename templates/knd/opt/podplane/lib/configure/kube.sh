@@ -27,6 +27,13 @@ KUBE_API_PORT="${KUBE_API_PORT:-6443}"
 case "$KUBE_API_PORT" in
   ''|*[!0-9]*) fatal "KUBE_API_PORT must be numeric" ;;
 esac
+OIDC_CA_FILE=""
+if [ -n "${OIDC_CA_CERT:-}" ]; then
+  OIDC_CA_FILE="/opt/crt/oidc-ca.pem"
+  mkdir -p "${PODPLANE_ROOT:-}/opt/crt"
+  printf '%s' "$OIDC_CA_CERT" | base64 -d > "${PODPLANE_ROOT:-}$OIDC_CA_FILE"
+  set_file_permissions 0640 root podplane "$OIDC_CA_FILE"
+fi
 
 # Create kubelet env file
 mkdir -p "${PODPLANE_ROOT:-}/opt/env"
