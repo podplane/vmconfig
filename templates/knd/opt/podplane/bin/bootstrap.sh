@@ -93,7 +93,6 @@ NSTANCE_SERVER_REGISTRATION_ADDR=$(quote_env_value "${NSTANCE_SERVER_REGISTRATIO
 NSTANCE_SERVER_AGENT_ADDR=$(quote_env_value "${NSTANCE_SERVER_AGENT_ADDR:-}")
 KUBE_API_ETCD_SERVERS=$(quote_env_value "${KUBE_API_ETCD_SERVERS:-}")
 OIDC_ISSUER=$(quote_env_value "${OIDC_ISSUER:-}")
-OIDC_CUSTOM_CA=$(quote_env_value "${OIDC_CUSTOM_CA:-}")
 OIDC_CA_FILE=$(quote_env_value "${OIDC_CA_FILE:-}")
 KUBE_LOG_LEVEL=$(quote_env_value "${KUBE_LOG_LEVEL:-2}")
 NETSY_BUCKET=$(quote_env_value "${NETSY_BUCKET:-}")
