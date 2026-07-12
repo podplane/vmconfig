@@ -15,7 +15,6 @@ set -euo pipefail
 USER_DATA_ENV="/opt/podplane/etc/user-data.env"
 DETECTED_ENV="/opt/podplane/etc/detected.env"
 MUTABLE_ENV="/opt/podplane/etc/mutable.env"
-BOOTSTRAP_ENV="/opt/podplane/etc/bootstrap.env"
 DEFAULT_MUTABLE_ENV="/opt/podplane/share/defaults/mutable.env"
 BOOTSTRAP_DONE="/opt/podplane/bootstrap.done"
 INSTALLED_VMCONFIG_MANIFEST="/opt/podplane/share/vmconfig-installed.json"
@@ -70,7 +69,7 @@ instance_fqdn="${INSTANCE_FQDN:-$(derive_instance_fqdn "$instance_hostname")}"
 tmp_detected="${DETECTED_ENV}.tmp"
 tmp_mutable="${MUTABLE_ENV}.tmp"
 tmp_done="${BOOTSTRAP_DONE}.tmp"
-rm -f "${PODPLANE_ROOT:-}$tmp_detected" "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" "${PODPLANE_ROOT:-}$tmp_mutable" "${PODPLANE_ROOT:-}$tmp_done"
+rm -f "${PODPLANE_ROOT:-}$tmp_detected" "${PODPLANE_ROOT:-}$tmp_mutable" "${PODPLANE_ROOT:-}$tmp_done"
 log "writing ${DETECTED_ENV}..."
 cat > "${PODPLANE_ROOT:-}$tmp_detected" <<EOF
 VMCONFIG_KIND=$(quote_env_value "${VMCONFIG_KIND:-}")
@@ -85,23 +84,9 @@ EOF
 [ -s "${PODPLANE_ROOT:-}$tmp_detected" ] || fatal "failed to write non-empty ${DETECTED_ENV}"
 set_file_permissions 0600 root root "$tmp_detected"
 
-# write bootstrap.env file
-# this is used to bootstrap the initial mutable.env file with a subset of user-data.env vars
-log "writing ${BOOTSTRAP_ENV}..."
-grep -E '^SSH_AUTHORIZED_KEY=' \
-  "${PODPLANE_ROOT:-}$USER_DATA_ENV" > "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV"
-[ -s "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" ] || fatal "failed to write non-empty ${BOOTSTRAP_ENV}"
-set_file_permissions 0600 root root "$BOOTSTRAP_ENV"
-
 # write mutable.env file
-# layer the bootstrap.env file over the default mutable.env file to bootstrap the first mutable.env file version
 log "writing ${MUTABLE_ENV}..."
 cp "${PODPLANE_ROOT:-}$DEFAULT_MUTABLE_ENV" "${PODPLANE_ROOT:-}$tmp_mutable"
-UPDATE_MUTABLE_ENV_REFRESH_HOSTS=false \
-  "${SCRIPT_DIR}/update-mutable-env.sh" \
-  "${PODPLANE_ROOT:-}$BOOTSTRAP_ENV" \
-  "${PODPLANE_ROOT:-}$tmp_mutable" \
-  true
 [ -s "${PODPLANE_ROOT:-}$tmp_mutable" ] || fatal "failed to write non-empty ${MUTABLE_ENV}"
 set_file_permissions 0600 root root "$tmp_mutable"
 

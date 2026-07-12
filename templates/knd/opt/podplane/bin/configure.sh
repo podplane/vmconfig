@@ -145,12 +145,19 @@ elif [ ! -f /opt/nstance-agent/identity/identity.crt ]; then
   fatal "nstance nonce JWT is required before registration, or identity certificate after registration"
 fi
 
-if [ -n "${SSH_AUTHORIZED_KEY:-}" ]; then
+ssh_authorized_keys="$(
+  printf '%s\n%s\n' "${IMMUTABLE_SSH_AUTHORIZED_KEYS:-}" "${SSH_AUTHORIZED_KEYS:-}" |
+    awk 'NF && !seen[$0]++'
+)"
+if [ -n "$ssh_authorized_keys" ]; then
   log "ensuring SSH authorized_keys is configured..."
   mkdir -p /home/admin/.ssh
   chmod 0700 /home/admin/.ssh
-  echo "${SSH_AUTHORIZED_KEY}" > /home/admin/.ssh/authorized_keys
-  chmod 0600 /home/admin/.ssh/authorized_keys
+  authorized_keys_tmp="$(mktemp /home/admin/.ssh/authorized_keys.XXXXXX)"
+  printf '%s\n' "$ssh_authorized_keys" > "$authorized_keys_tmp"
+  chmod 0600 "$authorized_keys_tmp"
+  chown admin:admin "$authorized_keys_tmp"
+  mv "$authorized_keys_tmp" /home/admin/.ssh/authorized_keys
   chown -R admin:admin /home/admin/.ssh
 elif [ -f /home/admin/.ssh/authorized_keys ]; then
   log "removing SSH authorized_keys file..."

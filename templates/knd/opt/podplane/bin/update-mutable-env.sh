@@ -137,12 +137,6 @@ fi
 mv "$DEST_ENV_TMP_FILE" "$DEST_ENV_FILE"
 echo "Done."
 
-if [ "${UPDATE_MUTABLE_ENV_REFRESH_HOSTS:-true}" != false ] && [ -x /opt/podplane/lib/configure/hosts.sh ]; then
-  echo -n "Refreshing managed hosts entries... "
-  /opt/podplane/lib/configure/hosts.sh
-  echo "Done."
-fi
-
 if [ "$DELETE_SOURCE_ENV_FILE" = true ]; then
   echo -n "Deleting source env file: $SOURCE_ENV_FILE... "
   rm -f "$SOURCE_ENV_FILE"

@@ -20,6 +20,7 @@ SERVICE_USER_DEFAULT_SHELL="/usr/sbin/nologin"
 LOGIN_USER_DEFAULT_SHELL="/bin/bash"
 LOCK_FILE="/var/lock/podplane-permissions.lock"
 USER_DATA_ENV="/opt/podplane/etc/user-data.env"
+MUTABLE_ENV="/opt/podplane/etc/mutable.env"
 
 # functions ------------------------------------------------------------------
 
@@ -156,6 +157,10 @@ if [ -f "$USER_DATA_ENV" ]; then
   # shellcheck source=/dev/null
   source "$USER_DATA_ENV"
 fi
+if [ -f "$MUTABLE_ENV" ]; then
+  # shellcheck source=/dev/null
+  source "$MUTABLE_ENV"
+fi
 
 # users and groups ----------------------------------------------------------
 log "configuring users and groups..."
@@ -168,7 +173,7 @@ ensure_user_and_groups   kube2iam                kube2iam                podplan
 ensure_user_and_groups   containerd              containerd              podplane
 ensure_user_and_groups   kubelet                 kubelet                 podplane containerd
 ensure_user_and_groups   zot                     zot                     podplane
-if [ -n "${SSH_AUTHORIZED_KEY:-}" ]; then
+if [ -n "${IMMUTABLE_SSH_AUTHORIZED_KEYS:-}" ] || [ -n "${SSH_AUTHORIZED_KEYS:-}" ]; then
   ensure_login_user_and_groups admin admin
 fi
 if [ "$VMCONFIG_KIND" = "knc" ]; then
@@ -309,8 +314,8 @@ for lib in "/usr/lib/${ARCH_TRIPLET}/libpq.so.5" "/usr/lib/${ARCH_TRIPLET}/libsu
   [ -e "$lib" ] && chmod 0755 "$lib"
 done
 
-if [ -n "${SSH_AUTHORIZED_KEY:-}" ]; then
-  log "configuring admin sudo permissions..."
+if [ -n "${IMMUTABLE_SSH_AUTHORIZED_KEYS:-}" ] || [ -n "${SSH_AUTHORIZED_KEYS:-}" ]; then
+  log "ensuring admin sudo permissions are configured..."
   mkdir -p /etc/sudoers.d
   echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
   chmod 0440 /etc/sudoers.d/admin
