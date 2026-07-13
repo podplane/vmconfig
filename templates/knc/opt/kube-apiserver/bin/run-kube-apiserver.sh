@@ -62,7 +62,7 @@ args=(
 
   # Hostname presented externally
   "--external-hostname=${KUBE_API_PUBLIC_HOSTNAME}"
-  "--secure-port=${KUBE_API_PORT:-6443}"
+  '--secure-port=6443'
 
   #
   # Settings for etcd
@@ -85,8 +85,8 @@ args=(
   # Service Accounts
   #
 
-  "--service-account-issuer=https://${KUBE_API_PUBLIC_HOSTNAME}"
-  "--service-account-jwks-uri=https://${KUBE_API_PUBLIC_HOSTNAME}/.well-known/openid-configuration"
+  "--service-account-issuer=${KUBE_SERVICE_ACCOUNT_ISSUER}"
+  "--service-account-jwks-uri=${KUBE_SERVICE_ACCOUNT_ISSUER}/openid/v1/jwks"
 
   # Keys for verification and signing of Service Accounts
   "--service-account-key-file=${serviceAccountKeyFile}"

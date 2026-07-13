@@ -23,10 +23,6 @@ case "$VMCONFIG_KIND" in
 esac
 
 # Set vars
-KUBE_API_PORT="${KUBE_API_PORT:-6443}"
-case "$KUBE_API_PORT" in
-  ''|*[!0-9]*) fatal "KUBE_API_PORT must be numeric" ;;
-esac
 KUBE_CLUSTER_CIDR="${KUBE_CLUSTER_CIDR:-100.64.0.0/10,fd64::/48}"
 KUBE_NODE_CIDR_MASK_SIZE_IPV4="${KUBE_NODE_CIDR_MASK_SIZE_IPV4:-24}"
 KUBE_NODE_CIDR_MASK_SIZE_IPV6="${KUBE_NODE_CIDR_MASK_SIZE_IPV6:-64}"
@@ -36,6 +32,21 @@ for name in KUBE_NODE_CIDR_MASK_SIZE_IPV4 KUBE_NODE_CIDR_MASK_SIZE_IPV6; do
   esac
 done
 KUBE_SERVICE_CLUSTER_IP_RANGE="${KUBE_SERVICE_CLUSTER_IP_RANGE:-198.18.0.0/15,fdc6::/108}"
+KUBE_CLUSTER_DNS="${KUBE_CLUSTER_DNS:-198.19.255.254,fdc6::ffff}"
+IFS=, read -r -a kube_cluster_dns <<< "$KUBE_CLUSTER_DNS"
+[ "${#kube_cluster_dns[@]}" -gt 0 ] || fatal "KUBE_CLUSTER_DNS must be a comma-separated IP list"
+for address in "${kube_cluster_dns[@]}"; do
+  if [[ "$address" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    IFS=. read -r -a octets <<< "$address"
+    for octet in "${octets[@]}"; do
+      ((10#$octet <= 255)) || fatal "KUBE_CLUSTER_DNS must be a comma-separated IP list"
+    done
+  elif [[ "$address" =~ ^[0-9A-Fa-f:]+$ && "$address" == *:* && "$address" != ":" && "$address" != *:::* ]]; then
+    :
+  else
+    fatal "KUBE_CLUSTER_DNS must be a comma-separated IP list"
+  fi
+done
 OIDC_SIGNING_ALGS="${OIDC_SIGNING_ALGS:-RS256}"
 OIDC_CA_FILE=""
 if [ -n "${OIDC_CA_CERT:-}" ]; then
@@ -44,6 +55,14 @@ if [ -n "${OIDC_CA_CERT:-}" ]; then
   printf '%s' "$OIDC_CA_CERT" | base64 -d > "${PODPLANE_ROOT:-}$OIDC_CA_FILE"
   set_file_permissions 0640 root podplane "$OIDC_CA_FILE"
 fi
+
+# Keep kubelet DNS aligned with the configured service networks.
+cluster_dns_yaml=""
+for address in "${kube_cluster_dns[@]}"; do
+  [ -z "$cluster_dns_yaml" ] || cluster_dns_yaml+=", "
+  cluster_dns_yaml+="\"$address\""
+done
+sed -E -i "s#^clusterDNS:.*#clusterDNS: [$cluster_dns_yaml]#" "${PODPLANE_ROOT:-}/opt/kubelet/etc/kubelet.yaml"
 
 # Create kubelet env file
 mkdir -p "${PODPLANE_ROOT:-}/opt/env"
@@ -67,7 +86,7 @@ if [ "$VMCONFIG_KIND" = "knc" ]; then
   cat > "${PODPLANE_ROOT:-}$tmp" <<EOF
 KUBE_LOG_LEVEL=$(quote_env_value "${KUBE_LOG_LEVEL:-2}")
 KUBE_API_PUBLIC_HOSTNAME=$(quote_env_value "${KUBE_API_PUBLIC_HOSTNAME:-}")
-KUBE_API_PORT=$(quote_env_value "${KUBE_API_PORT:-6443}")
+KUBE_SERVICE_ACCOUNT_ISSUER=$(quote_env_value "${KUBE_SERVICE_ACCOUNT_ISSUER:-}")
 KUBE_API_ETCD_SERVERS=$(quote_env_value "${KUBE_API_ETCD_SERVERS:-}")
 KUBE_SERVICE_CLUSTER_IP_RANGE=$(quote_env_value "$KUBE_SERVICE_CLUSTER_IP_RANGE")
 OIDC_ISSUER=$(quote_env_value "${OIDC_ISSUER:-}")
@@ -97,14 +116,3 @@ mkdir -p "${PODPLANE_ROOT:-}/etc"
 log "ensuring subuid/subgid user namespaces are correct..."
 echo "kubelet:65536:7208960" > "${PODPLANE_ROOT:-}/etc/subuid"
 echo "kubelet:65536:7208960" > "${PODPLANE_ROOT:-}/etc/subgid"
-
-# Keep static kubeconfigs pointed at the configured API server port.
-for kubeconfig in \
-  /opt/kube2iam/etc/kubeconfig \
-  /opt/kubelet/etc/kubeconfig \
-  /opt/kube-controller-manager/etc/kubeconfig \
-  /opt/kube-scheduler/etc/kubeconfig
-do
-  [ -f "${PODPLANE_ROOT:-}$kubeconfig" ] || continue
-  sed -E -i "s#server: https://([^:]+):[0-9]+#server: https://\1:${KUBE_API_PORT}#" "${PODPLANE_ROOT:-}$kubeconfig"
-done
