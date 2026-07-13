@@ -289,6 +289,7 @@ if [ -d /opt/cni/bin ]; then
 fi
 if [ "$VMCONFIG_KIND" = "knc" ]; then
   ensure_executable "/opt/kube-apiserver/bin/run-kube-apiserver.sh"
+  ensure_executable "/opt/kube-controller-manager/bin/run-kube-controller-manager.sh"
   ensure_executable "/usr/bin/kube-apiserver"
   ensure_executable "/usr/bin/kube-scheduler"
   ensure_executable "/usr/bin/kube-controller-manager"

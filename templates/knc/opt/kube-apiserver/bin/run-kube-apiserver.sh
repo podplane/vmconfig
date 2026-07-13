@@ -55,7 +55,7 @@ args=(
   #
 
   # Service IP CIDR blocks
-  '--service-cluster-ip-range=198.18.0.0/15,fdc6::/108'
+  "--service-cluster-ip-range=${KUBE_SERVICE_CLUSTER_IP_RANGE}"
 
   # Prevent goaway (important for single-server clusters)
   '--goaway-chance=0'
@@ -190,9 +190,8 @@ args=(
   # Note: this is currently unused.
   # '--oidc-required-claim='
   # The signing algorithms accepted. Default is "RS256".
-  # Note: kubelogin/oidc-login only supports RS256, so leaving for compatibility
   #
-  '--oidc-signing-algs=RS256'
+  "--oidc-signing-algs=${OIDC_SIGNING_ALGS}"
 
   #
   # Authorization Mode defaults to AllowAll

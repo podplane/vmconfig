@@ -27,6 +27,16 @@ KUBE_API_PORT="${KUBE_API_PORT:-6443}"
 case "$KUBE_API_PORT" in
   ''|*[!0-9]*) fatal "KUBE_API_PORT must be numeric" ;;
 esac
+KUBE_CLUSTER_CIDR="${KUBE_CLUSTER_CIDR:-100.64.0.0/10,fd64::/48}"
+KUBE_NODE_CIDR_MASK_SIZE_IPV4="${KUBE_NODE_CIDR_MASK_SIZE_IPV4:-24}"
+KUBE_NODE_CIDR_MASK_SIZE_IPV6="${KUBE_NODE_CIDR_MASK_SIZE_IPV6:-64}"
+for name in KUBE_NODE_CIDR_MASK_SIZE_IPV4 KUBE_NODE_CIDR_MASK_SIZE_IPV6; do
+  case "${!name}" in
+    ''|*[!0-9]*) fatal "$name must be numeric" ;;
+  esac
+done
+KUBE_SERVICE_CLUSTER_IP_RANGE="${KUBE_SERVICE_CLUSTER_IP_RANGE:-198.18.0.0/15,fdc6::/108}"
+OIDC_SIGNING_ALGS="${OIDC_SIGNING_ALGS:-RS256}"
 OIDC_CA_FILE=""
 if [ -n "${OIDC_CA_CERT:-}" ]; then
   OIDC_CA_FILE="/opt/crt/oidc-ca.pem"
@@ -59,13 +69,27 @@ KUBE_LOG_LEVEL=$(quote_env_value "${KUBE_LOG_LEVEL:-2}")
 KUBE_API_PUBLIC_HOSTNAME=$(quote_env_value "${KUBE_API_PUBLIC_HOSTNAME:-}")
 KUBE_API_PORT=$(quote_env_value "${KUBE_API_PORT:-6443}")
 KUBE_API_ETCD_SERVERS=$(quote_env_value "${KUBE_API_ETCD_SERVERS:-}")
+KUBE_SERVICE_CLUSTER_IP_RANGE=$(quote_env_value "$KUBE_SERVICE_CLUSTER_IP_RANGE")
 OIDC_ISSUER=$(quote_env_value "${OIDC_ISSUER:-}")
+OIDC_SIGNING_ALGS=$(quote_env_value "$OIDC_SIGNING_ALGS")
 CLUSTER_ID=$(quote_env_value "${CLUSTER_ID:-}")
 OIDC_CA_FILE=$(quote_env_value "${OIDC_CA_FILE:-}")
 EOF
   set_file_permissions 0640 root kube-apiserver "$tmp"
   mv "${PODPLANE_ROOT:-}$tmp" "${PODPLANE_ROOT:-}/opt/env/kube-apiserver.env"
   log "wrote /opt/env/kube-apiserver.env"
+
+  tmp="/opt/env/kube-controller-manager.env.tmp"
+  cat > "${PODPLANE_ROOT:-}$tmp" <<EOF
+KUBE_LOG_LEVEL=$(quote_env_value "${KUBE_LOG_LEVEL:-2}")
+KUBE_CLUSTER_CIDR=$(quote_env_value "$KUBE_CLUSTER_CIDR")
+KUBE_NODE_CIDR_MASK_SIZE_IPV4=$(quote_env_value "$KUBE_NODE_CIDR_MASK_SIZE_IPV4")
+KUBE_NODE_CIDR_MASK_SIZE_IPV6=$(quote_env_value "$KUBE_NODE_CIDR_MASK_SIZE_IPV6")
+KUBE_SERVICE_CLUSTER_IP_RANGE=$(quote_env_value "$KUBE_SERVICE_CLUSTER_IP_RANGE")
+EOF
+  set_file_permissions 0640 root kube-controller-manager "$tmp"
+  mv "${PODPLANE_ROOT:-}$tmp" "${PODPLANE_ROOT:-}/opt/env/kube-controller-manager.env"
+  log "wrote /opt/env/kube-controller-manager.env"
 fi
 
 # Configure kubelet user namespaces.
