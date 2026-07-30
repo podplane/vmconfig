@@ -31,6 +31,8 @@ The VM kind (`knd` or `knc`) is read from `vmconfig.kind` in `/opt/podplane/shar
 
 `install.sh`, `configure.sh`, and `restart.sh` are designed to be idempotent. They handle checking all dependencies, installing them, configuring the system, and (re)starting services as needed.
 
+Runtime settings that can be updated after bootstrap are defined by the stable `/opt/podplane/share/defaults/mutable.env` contract.
+
 ## Development
 
 All dev workflows are defined in the [Makefile](./Makefile) - run `make help` for the full list, but key workflows include:

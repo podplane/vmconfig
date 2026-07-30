@@ -158,15 +158,19 @@ args=(
   #
   # JWT claim to use as the user name. By default sub, which is expected
   # to be a unique identifier of the end user.
-  # Note that we put the user ID in the sub, but it is more useful
+  # Note that sub is typically a stable user ID, but it may be more useful
   # for audit purposes to show the users' validated email address.
+  # Easy OIDC by default puts the users' validated email address in the sub,
+  # and a service identifier for trusted/federated tokens.
   #
-  '--oidc-username-claim=email'
+  '--oidc-username-claim=sub'
 
   #
   # Prefix prepended to username claims to prevent clashes with existing
   # names. Defaults to ( Issuer URL )#
-  # Note: we use the email as the username, so we don't want to prefix it.
+  # We do not prefix username as we expect a single issuer which we
+  # want to be interchangeable so issuer URLs can be updated without
+  # impacting RBAC policies.
   #
   '--oidc-username-prefix='
 
