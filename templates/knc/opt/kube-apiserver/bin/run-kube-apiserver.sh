@@ -156,14 +156,10 @@ args=(
   "--oidc-client-id=${CLUSTER_ID}"
 
   #
-  # JWT claim to use as the user name. By default sub, which is expected
-  # to be a unique identifier of the end user.
-  # Note that sub is typically a stable user ID, but it may be more useful
-  # for audit purposes to show the users' validated email address.
-  # Easy OIDC by default puts the users' validated email address in the sub,
-  # and a service identifier for trusted/federated tokens.
+  # Truster puts user and service identities in sub. Other OIDC providers may
+  # select a different claim through OIDC_USERNAME_CLAIM.
   #
-  '--oidc-username-claim=sub'
+  "--oidc-username-claim=${OIDC_USERNAME_CLAIM:-sub}"
 
   #
   # Prefix prepended to username claims to prevent clashes with existing
