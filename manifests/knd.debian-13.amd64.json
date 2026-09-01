@@ -56,11 +56,11 @@
         "size": 59007730
       },
       "kubelet": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kubelet",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubelet",
         "type": "binary",
-        "digest": "sha256:7efa1780c73d9fb3a464002864e582eb2d15aa691e475eaae323093d08feae14",
-        "size": 60080393
+        "digest": "sha256:ee554f77da57ad40a5d5f8625ac9c4af8b75d9d5a259367a885e5e816954b044",
+        "size": 61243657
       },
       "libpq5": {
         "version": "17.9-0+deb13u1",

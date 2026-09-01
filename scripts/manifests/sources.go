@@ -19,7 +19,7 @@
 // main.go consumes `sources` and writes the resolved manifests to
 // vmconfig/manifests/<kind>.<os>.<arch>.json (one file per kind, OS, and arch).
 //
-// Upstream signing coverage (last updated April 2026):
+// Upstream signing coverage (last updated August 2026):
 //   - kubernetes  : per-binary cosign .sig/.cert on dl.k8s.io
 //   - containerd  : sigstore bundle  *-attestation.intoto.jsonl
 //   - runc        : GPG .asc per-file, maintainer keys — NO cosign artifacts.
@@ -57,7 +57,7 @@ var sources = Sources{
 				ExpectIssuer: "https://accounts.google.com",
 				// Subject is `krel-staging@…` (NOT `krel-trust@…`, despite some
 				// out-of-date docs); confirmed against v1.32.x and v1.36.0
-				// release artifacts, April 2026.
+				// release artifacts, including v1.37.0, August 2026.
 				ExpectSubject: "krel-staging@k8s-releng-prod.iam.gserviceaccount.com",
 			},
 			Files: []FileEntry{

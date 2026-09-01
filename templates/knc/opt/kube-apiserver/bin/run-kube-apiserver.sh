@@ -199,7 +199,8 @@ args=(
   #
   '--authorization-mode=Node,RBAC'
 
-  # Adminission Plugins to enable (in addition to default ones)
+  # Admission plugins to enable (in addition to default ones). NodeRestriction
+  # is required for the stable PodCertificateRequest node trust boundary.
   '--enable-admission-plugins=NodeRestriction,NamespaceExists,OwnerReferencesPermissionEnforcement'
 
   # Note: required for Cilium. Use Pod Security Policy to restrict.

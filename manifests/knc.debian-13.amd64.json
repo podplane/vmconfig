@@ -56,39 +56,39 @@
         "size": 59007730
       },
       "kube-apiserver": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kube-apiserver",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kube-apiserver",
         "type": "binary",
-        "digest": "sha256:9b4dba0a5b945f1fe0ce18f47535c5ff0c46ae384f9222047bce39fe91b6023e",
-        "size": 88309922
+        "digest": "sha256:6207beb6d74effa86ccfdbd624c1699477755993d6056e41f90b65e6341b7f78",
+        "size": 95936674
       },
       "kube-controller-manager": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kube-controller-manager",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kube-controller-manager",
         "type": "binary",
-        "digest": "sha256:41a41cd08f8035661848e883479816d5e65f832a461c004840eb2cd54998af08",
-        "size": 74285218
+        "digest": "sha256:4eb2466c5cd28e2d9c3feef812663b05206581101809af8c26c38de5f664c6d3",
+        "size": 79425698
       },
       "kube-scheduler": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kube-scheduler",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kube-scheduler",
         "type": "binary",
-        "digest": "sha256:37729fdcd47c791cbebe413951150f58d36e05cbc759ad77e5cf66196fccbec8",
-        "size": 49098914
+        "digest": "sha256:b9c0b12b99d0eeddf85f0a2318868dca88b0de5fa50826a96b5a53e9e6a00132",
+        "size": 51077282
       },
       "kubectl": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kubectl",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl",
         "type": "binary",
-        "digest": "sha256:629d3f410e09bf49b64ae7079f7f0bda1191efed311f7d37fdbab0ad5b0ec2b7",
-        "size": 59502754
+        "digest": "sha256:6129359f4e1f3848a5572ccb0b26cf28b8ca08cef38c95a765b2f64a2c961a2f",
+        "size": 61886626
       },
       "kubelet": {
-        "version": "1.36.1",
-        "url": "https://dl.k8s.io/release/v1.36.1/bin/linux/amd64/kubelet",
+        "version": "1.37.0",
+        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubelet",
         "type": "binary",
-        "digest": "sha256:7efa1780c73d9fb3a464002864e582eb2d15aa691e475eaae323093d08feae14",
-        "size": 60080393
+        "digest": "sha256:ee554f77da57ad40a5d5f8625ac9c4af8b75d9d5a259367a885e5e816954b044",
+        "size": 61243657
       },
       "libpq5": {
         "version": "17.9-0+deb13u1",
