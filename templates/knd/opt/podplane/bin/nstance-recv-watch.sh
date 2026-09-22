@@ -28,7 +28,6 @@ declare -A ALLOWED_RECEIVED_FILES=(
   [ca.pub]=1
   [service-accounts.pub]=1
   [service-accounts.key]=1
-  [containerd.client.crt]=1
   [front-proxy.client.crt]=1
   [kube-apiserver.client.crt]=1
   [kube-apiserver.server.crt]=1
@@ -37,7 +36,6 @@ declare -A ALLOWED_RECEIVED_FILES=(
   [kubelet.server.crt]=1
   [netsy.client.crt]=1
   [netsy.server.crt]=1
-  [registry.server.crt]=1
 )
 if [ "$VMCONFIG_KIND" = "knc" ]; then
   ALLOWED_RECEIVED_FILES[kube-controller-manager.client.crt]=1
@@ -148,10 +146,7 @@ for file in "${NSTANCE_BASE}"/keys/*.key; do
 
   DEST_SERVICE=$(echo "$KEY_FILE" | cut -d. -f1)
   DEST_GROUP="$DEST_SERVICE"
-  if [ "$DEST_SERVICE" = "registry" ]; then
-    # The registry service runs as the zot user/group.
-    DEST_GROUP="zot"
-  elif [ "$KEY_FILE" = "front-proxy.client.key" ]; then
+  if [ "$KEY_FILE" = "front-proxy.client.key" ]; then
     # The front-proxy client cert is used by kube-apiserver for aggregated API proxying
     DEST_SERVICE="kube-apiserver"
     DEST_GROUP="kube-apiserver"
@@ -201,11 +196,11 @@ if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
     systemctl disable fluent-bit || true
     systemctl stop fluent-bit || true
   fi
-  if zot_enabled; then
-    restart_service zot
+  if registry_enabled; then
+    restart_service registry
   else
-    systemctl disable zot || true
-    systemctl stop zot || true
+    systemctl disable registry || true
+    systemctl stop registry || true
   fi
   if netsy_enabled; then
     restart_service netsy

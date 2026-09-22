@@ -140,7 +140,7 @@ fi
 #                at startup; libsubid5/libpq5 are runtime libs.
 #   2. tar.gz  - containerd/crictl to /usr/local/bin per
 #                upstream docs; cni-plugins to /opt/cni/bin per CRI.
-#   3. binary  - kubelet/kube-*/zot to /usr/bin; runc to
+#   3. binary  - kubelet/kube-*/registry to /usr/bin; runc to
 #                /usr/local/sbin per upstream containerd docs.
 #
 # policy-rc.d blocks dpkg postinst from starting services; configure.sh
@@ -186,6 +186,7 @@ extract_tarball() { # <name>
     netsy)       mkdir -p /opt/netsy/bin && tar -xzf "$src" -C /opt/netsy/bin netsy ;;
     nstance-agent) mkdir -p /opt/nstance-agent/bin && tar -xzf "$src" -C /opt/nstance-agent/bin nstance-agent ;;
     cni-plugins) mkdir -p /opt/cni/bin && tar -xzf "$src" -C /opt/cni/bin ;;
+    registry)    tar -xzf "$src" -C /usr/bin registry ;;
     *)           fatal "no extract rule for tarball ${name}" ;;
   esac
   log "extracted tarball ${name}"

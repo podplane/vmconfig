@@ -45,6 +45,11 @@ cp -a "$PKG_TARBALL" "$ARTIFACTS_DIR/vmconfig.tar.gz"
 log "running install.sh (first invocation)"
 "$INSTALL_SCRIPT"
 
+log "checking registry installation"
+[ -x /usr/bin/registry ] || fatal "registry binary was not installed"
+[ -x /opt/registry/bin/run-registry.sh ] || fatal "registry launcher is missing"
+[ -f /etc/systemd/system/registry.service ] || fatal "registry systemd unit is missing"
+
 log "running install.sh (idempotency check; should hit early-exit)"
 "$INSTALL_SCRIPT"
 

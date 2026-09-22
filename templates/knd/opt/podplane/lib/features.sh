@@ -8,8 +8,8 @@ fluent_bit_enabled() {
   [ "${TELEMETRY_ENABLED:-false}" = true ]
 }
 
-# zot_enabled returns true when the local registry service should run.
-zot_enabled() {
+# registry_enabled returns true when the local registry service should run.
+registry_enabled() {
   [ "${REGISTRY_ENABLED:-true}" = true ] &&
     [ -n "${REGISTRY_HOSTNAME:-}" ] &&
     [ -n "${REGISTRY_BUCKET:-}" ]

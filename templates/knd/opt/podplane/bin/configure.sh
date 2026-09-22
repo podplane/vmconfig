@@ -117,8 +117,8 @@ if fluent_bit_enabled; then
   "${CONFIGURE_COMPONENT_DIR}/fluent-bit.sh"
 fi
 "${CONFIGURE_COMPONENT_DIR}/containerd.sh"
-if zot_enabled; then
-  "${CONFIGURE_COMPONENT_DIR}/zot.sh"
+if registry_enabled; then
+  "${CONFIGURE_COMPONENT_DIR}/registry.sh"
 fi
 "${CONFIGURE_COMPONENT_DIR}/kube2iam.sh"
 "${CONFIGURE_COMPONENT_DIR}/kube.sh"

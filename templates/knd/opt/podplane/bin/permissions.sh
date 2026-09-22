@@ -172,7 +172,7 @@ ensure_user_and_groups   fluent-bit              fluent-bit              podplan
 ensure_user_and_groups   kube2iam                kube2iam                podplane
 ensure_user_and_groups   containerd              containerd              podplane
 ensure_user_and_groups   kubelet                 kubelet                 podplane containerd
-ensure_user_and_groups   zot                     zot                     podplane
+ensure_user_and_groups   registry                registry                podplane
 if [ -n "${IMMUTABLE_SSH_AUTHORIZED_KEYS:-}" ] || [ -n "${SSH_AUTHORIZED_KEYS:-}" ]; then
   ensure_login_user_and_groups admin admin
 fi
@@ -224,10 +224,8 @@ ensure_permissions   0750 root                    containerd              "/opt/
 ensure_permissions   0750 kubelet                 kubelet                 "/var/lib/kubelet"
 ensure_permissions   0750 kubelet                 kubelet                 "/var/log/containers"
 ensure_permissions   0750 kubelet                 kubelet                 "/var/log/pods"
-ensure_permissions   0700 zot                     zot                     "/opt/zot"
-ensure_permissions   0700 zot                     zot                     "/opt/zot/etc"
-ensure_permissions   0700 zot                     zot                     "/opt/zot/storage"
-ensure_permissions   0750 root                    zot                     "/opt/key/registry"
+ensure_permissions   0700 registry                registry                "/opt/registry"
+ensure_permissions   0700 registry                registry                "/opt/registry/etc"
 if [ "$VMCONFIG_KIND" = "knc" ]; then
   ensure_permissions 0700 netsy                   netsy                   "/opt/data"
   ensure_permissions 0700 netsy                   netsy                   "/opt/netsy"
@@ -256,7 +254,7 @@ ensure_executable "/opt/podplane/lib/configure/hosts.sh"
 ensure_executable "/opt/podplane/lib/configure/nstance-agent.sh"
 ensure_executable "/opt/podplane/lib/configure/fluent-bit.sh"
 ensure_executable "/opt/podplane/lib/configure/containerd.sh"
-ensure_executable "/opt/podplane/lib/configure/zot.sh"
+ensure_executable "/opt/podplane/lib/configure/registry.sh"
 ensure_executable "/opt/podplane/lib/configure/kube2iam.sh"
 ensure_executable "/opt/podplane/lib/configure/kube.sh"
 ensure_executable "/opt/podplane/lib/configure/netsy.sh"
@@ -280,8 +278,8 @@ ensure_executable "/usr/local/bin/ctr"
 ensure_executable "/usr/local/sbin/runc"
 ensure_executable "/opt/kubelet/bin/run-kubelet.sh"
 ensure_executable "/usr/bin/kubelet"
-ensure_executable "/usr/bin/zot"
-ensure_executable "/opt/zot/bin/run-zot.sh"
+ensure_executable "/usr/bin/registry"
+ensure_executable "/opt/registry/bin/run-registry.sh"
 if [ -d /opt/cni/bin ]; then
   for f in /opt/cni/bin/*; do
     [ -e "$f" ] && chmod +x "$f"

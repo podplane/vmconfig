@@ -25,7 +25,8 @@
 //   - runc        : GPG .asc per-file, maintainer keys — NO cosign artifacts.
 //     Falls back to TLS+sha256sum until upstream adopts cosign or
 //     we add the maintainer keys to vmconfig/trust/.
-//   - zot: release checksums sidecar, no cosign artifacts. TLS-only.
+//   - registry: SHA-512 release checksums sidecar. The checksum file has a
+//     cosign bundle, but the archives do not have per-artifact signatures.
 //   - netsy, nstance-agent: release checksum sidecars.
 //   - cri-tools, cni-plugins, kube2iam: no consistent upstream signature scheme.
 //     TLS-only where release artifacts are available.
@@ -187,14 +188,14 @@ var sources = Sources{
 			Type:         DepTypeTarGz,
 			Files:        []FileEntry{{Name: "nstance-agent", Kind: allKinds}},
 		},
-		"zot": {
-			Repo:         "project-zot/zot",
-			FileURL:      "https://github.com/project-zot/zot/releases/download/v$VERSION/$FILE-linux-$ARCH-minimal",
-			HashURL:      "https://github.com/project-zot/zot/releases/download/v$VERSION/checksums.sha256.txt",
-			HashFilename: "$FILE-linux-$ARCH-minimal",
-			HashAlg:      "sha256",
-			Type:         DepTypeBinary,
-			Files:        []FileEntry{{Name: "zot", Kind: allKinds}},
+		"registry": {
+			Repo:         "podplane/registry",
+			FileURL:      "https://github.com/podplane/registry/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashURL:      "https://github.com/podplane/registry/releases/download/v$VERSION/registry_$VERSION_checksums.txt",
+			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
+			HashAlg:      "sha512",
+			Type:         DepTypeTarGz,
+			Files:        []FileEntry{{Name: "registry", Kind: allKinds}},
 		},
 	},
 	Images: []ImageSource{

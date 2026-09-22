@@ -1,0 +1,14 @@
+[Unit]
+Description=Podplane read-only registry
+After=network-online.target
+Requires=network-online.target
+StartLimitIntervalSec=0
+[Service]
+Type=exec
+Restart=always
+RestartSec=5
+User=registry
+Group=registry
+ExecStart=/opt/registry/bin/run-registry.sh
+[Install]
+WantedBy=multi-user.target

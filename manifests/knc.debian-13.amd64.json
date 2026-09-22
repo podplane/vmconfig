@@ -118,6 +118,13 @@
         "digest": "sha512:daafe7aa0de99b475d6b430b5d56a188ef5a58a09b0ece1fec68323bdcac02965135c5d82778b0977d75b9cb4742cb9ad17ef61d14d0149a077e35ec8f2cdf8e",
         "size": 5953829
       },
+      "registry": {
+        "version": "0.1.0",
+        "url": "https://github.com/podplane/registry/releases/download/v0.1.0/registry_0.1.0_linux_amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:68ceb5a4c7c2b10d12be9999e0014a527b81204e266448d53e17943b2eb0dda914531ca5ef28a04feaf4bd8146105911f8dccff960cfc997167cfb578247e366",
+        "size": 12315496
+      },
       "runc": {
         "version": "1.4.2",
         "url": "https://github.com/opencontainers/runc/releases/download/v1.4.2/runc.amd64",
@@ -138,13 +145,6 @@
         "type": "tar.gz",
         "digest": "",
         "size": 0
-      },
-      "zot": {
-        "version": "2.1.17",
-        "url": "https://github.com/project-zot/zot/releases/download/v2.1.17/zot-linux-amd64-minimal",
-        "type": "binary",
-        "digest": "sha256:523e5bf29a013db09115f780c3152af98fc5b65fc408a0d3e6c293643dc9bde7",
-        "size": 77988142
       }
     },
     "images": [

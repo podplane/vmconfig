@@ -76,12 +76,12 @@ else
   stop_units+=(fluent-bit)
 fi
 
-if zot_enabled; then
-  enable_units+=(zot)
-  restart_units+=(zot)
+if registry_enabled; then
+  enable_units+=(registry)
+  restart_units+=(registry)
 else
-  disable_units+=(zot)
-  stop_units+=(zot)
+  disable_units+=(registry)
+  stop_units+=(registry)
 fi
 
 if netsy_enabled; then

@@ -74,8 +74,8 @@ Per-source verification chain used by `update-manifests`:
 - __containerd tarballs__:
     `.sha256sum` sidecar and the release-wide sigstore bundle `*-attestation.intoto.jsonl` (GitHub Actions OIDC)
 
-- __runc, zot, cri-tools, cni-plugins, Debian OS image__:
-    TLS + sidecar checksum only - upstream does not publish cosign material we can verify
+- __runc, registry, cri-tools, cni-plugins, Debian OS image__:
+    TLS + sidecar checksum only - their available signing layouts are not currently verified by the manifest updater
 
 ## Learn More
 

@@ -36,7 +36,7 @@ pipeline:
         - _SYSTEMD_UNIT=kube-controller-manager.service
         - _SYSTEMD_UNIT=kube-scheduler.service
         - _SYSTEMD_UNIT=kubelet.service
-        - _SYSTEMD_UNIT=zot.service
+        - _SYSTEMD_UNIT=registry.service
       read_from_tail: false
     # END TELEMETRY_SYSTEMD_INPUT
 
