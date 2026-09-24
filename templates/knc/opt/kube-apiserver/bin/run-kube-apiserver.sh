@@ -60,6 +60,11 @@ args=(
   # Prevent goaway (important for single-server clusters)
   '--goaway-chance=0'
 
+  # Envoy Gateway uses the deprecated ClusterTrustBundle API until it adopts
+  # certificates.k8s.io/v1. Kubernetes 1.37 retains this API through 1.39 but
+  # disables beta APIs by default.
+  '--runtime-config=certificates.k8s.io/v1beta1=true'
+
   # Hostname presented externally
   "--external-hostname=${KUBE_API_PUBLIC_HOSTNAME}"
   '--secure-port=6443'
