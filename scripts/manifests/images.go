@@ -154,7 +154,7 @@ func processImages() error {
 	for _, arch := range Archs {
 		for _, image := range sources.Images {
 			needImage := false
-			for _, kind := range allKinds {
+			for _, kind := range containerRuntimeKinds {
 				m, err := readManifest(kind, arch)
 				if err != nil {
 					return err
@@ -179,7 +179,7 @@ func processImages() error {
 			if err != nil {
 				return err
 			}
-			for _, kind := range allKinds {
+			for _, kind := range containerRuntimeKinds {
 				m, err := readManifest(kind, arch)
 				if err != nil {
 					return err

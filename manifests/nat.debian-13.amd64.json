@@ -1,0 +1,137 @@
+{
+  "vmconfig": {
+    "version": "dev",
+    "kind": "nat",
+    "os": {
+      "name": "debian-13",
+      "arch": "amd64",
+      "image": {
+        "version": "20260914-2601",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260914-2601/debian-13-genericcloud-amd64-20260914-2601.qcow2",
+        "type": "qcow2",
+        "digest": "sha512:95e110dfcdbd0ed8a82a75ed9579802f9950cabf51a810dcc6388e81bc778188713878b9f28d583a0ea602fbf48b35996ae9ad37f584166d8fbd6489df248f53",
+        "size": 340983808
+      },
+      "boot": {
+        "cmdline": "root=PARTUUID=1efb3312-0992-49cb-8cd7-299ab2d630f6 ro console=tty0 console=ttyS0,115200 earlyprintk=ttyS0,115200 consoleblank=0",
+        "kernel": {
+          "partition": 1,
+          "path": "/boot/vmlinuz-6.12.107+deb13-cloud-amd64",
+          "digest": "sha256:d1bc2c60a78ae6979736d081bc3c90e45ace6baf414f767dff588e319d3492bd"
+        },
+        "initrd": {
+          "partition": 1,
+          "path": "/boot/initrd.img-6.12.107+deb13-cloud-amd64",
+          "digest": "sha256:828e8eeb355b1dbe4581aac86aa91129b47b9bd9d64659bfed36dc446f510132"
+        }
+      }
+    },
+    "dependencies": {
+      "fluent-bit": {
+        "version": "5.1.2",
+        "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.1.2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:31e289d745637bb62f645822c1e2d83e0712147388ac001394dadf21908154b5",
+        "size": 62818486
+      },
+      "jool-modules": {
+        "version": "4.1.15",
+        "url": "https://github.com/podplane/jool-builds/releases/download/jool-4.1.15-kernel-6.12.107%2Bdeb13/jool-4.1.15-6.12.107%2Bdeb13-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:0c98e206d8441c5b6651b57b10de39884ab9d35f6a92d5eea7049b4a712cc6bc",
+        "size": 8472245
+      },
+      "jool-tools": {
+        "version": "4.1.13-1.1",
+        "url": "https://deb.debian.org/debian/pool/main/j/jool/jool-tools_4.1.13-1.1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:08bf5123dd01deae6ac6dc8a1d4579e617a25e4b7b8352d486f2c22e40e76ffb",
+        "size": 72696
+      },
+      "libedit2": {
+        "version": "3.1-20250104-1",
+        "url": "https://deb.debian.org/debian/pool/main/libe/libedit/libedit2_3.1-20250104-1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:b002ea172b9c1e34a67bc497c523c67bb74c3f0a4e98113cb083990a1f1d3bfe",
+        "size": 93832
+      },
+      "libjansson4": {
+        "version": "2.14-2+b3",
+        "url": "https://deb.debian.org/debian/pool/main/j/jansson/libjansson4_2.14-2+b3_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:60707a62fe6c1228c3389b12a13ca4efd76defc5532473e547a29e99cf7d2a6e",
+        "size": 39792
+      },
+      "libmnl0": {
+        "version": "1.0.5-3",
+        "url": "https://deb.debian.org/debian/pool/main/libm/libmnl/libmnl0_1.0.5-3_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:4ec9c1096e0b954e3bdb03a62314ee7f49999045d3d55be3e4ded520ffc9baf5",
+        "size": 11928
+      },
+      "libnftables1": {
+        "version": "1.1.3-1",
+        "url": "https://deb.debian.org/debian/pool/main/n/nftables/libnftables1_1.1.3-1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:c7cbee3dce8452ae5c3c4269f6f52e96b896d36a46ea3c490e0e11e8ff359896",
+        "size": 332448
+      },
+      "libnftnl11": {
+        "version": "1.2.9-1",
+        "url": "https://deb.debian.org/debian/pool/main/libn/libnftnl/libnftnl11_1.2.9-1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:1b3eae46bfb9c6ab44e404797fb45278045f926d73974a84097ad47a3e27d983",
+        "size": 65012
+      },
+      "libnl-3-200": {
+        "version": "3.7.0-2",
+        "url": "https://deb.debian.org/debian/pool/main/libn/libnl3/libnl-3-200_3.7.0-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:ce5c153953016be42def7b105f37d55eae07a9608d1dfe6bcb03cc017fc384cb",
+        "size": 59432
+      },
+      "libnl-genl-3-200": {
+        "version": "3.7.0-2",
+        "url": "https://deb.debian.org/debian/pool/main/libn/libnl3/libnl-genl-3-200_3.7.0-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:8f2f81ef4c6f8636f0b0cb2ff40b3c54a497d121f49c485620ae43c94782cd94",
+        "size": 18136
+      },
+      "libpq5": {
+        "version": "17.11-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.11-0+deb13u1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:20a4c9ef58b4baf90deda67cfb2cc062871c062830dddc234d28f5ac7931b86b",
+        "size": 237376
+      },
+      "libxtables12": {
+        "version": "1.8.11-2",
+        "url": "https://deb.debian.org/debian/pool/main/i/iptables/libxtables12_1.8.11-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:4de5aa59faef5e98d6ba9f5f521a915be5641f224f597862f8d29e8319e8db16",
+        "size": 31896
+      },
+      "nftables": {
+        "version": "1.1.3-1",
+        "url": "https://deb.debian.org/debian/pool/main/n/nftables/nftables_1.1.3-1_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:2ddfa61baaf3a76e2c499db9e521ba6affb226f85af0b6fef739f346ac5f0c39",
+        "size": 75864
+      },
+      "nstance-agent": {
+        "version": "1.3.4",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.3.4/nstance-agent_1.3.4_linux_amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:c518bd0063b0e9deb5881d3d1c77e42436a1942dc3ee0520e4699768702b0d2b3122076c0acb8feaf2674043a4d7ee23144db8c6dd67611d6a99dd5980dc4f55",
+        "size": 5953178
+      },
+      "vmconfig": {
+        "version": "dev",
+        "url": "",
+        "type": "tar.gz",
+        "digest": "",
+        "size": 0
+      }
+    }
+  }
+}

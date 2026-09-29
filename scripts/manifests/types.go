@@ -16,11 +16,16 @@ const (
 var Archs = []string{ArchAmd64, ArchArm64}
 
 const (
-	KindKnc = "knc"
-	KindKnd = "knd"
+	KindKnc = "knc" // Kubernetes control-plane nodes
+	KindKnd = "knd" // Kubernetes data-plane nodes
+	KindNst = "nst" // Nstance Server nodes
+	KindNat = "nat" // NAT nodes
 )
 
-var allKinds = []string{KindKnc, KindKnd}
+var allKinds = []string{KindKnc, KindKnd, KindNst, KindNat}
+var containerRuntimeKinds = []string{KindKnc, KindKnd, KindNst}
+var kubernetesNodeKinds = []string{KindKnc, KindKnd}
+var nstanceAgentKinds = []string{KindKnc, KindKnd, KindNat}
 
 // DepType is the kind of artifact pointed at by a manifest entry.
 type DepType string
@@ -39,6 +44,7 @@ type FileEntry struct {
 	Name      string
 	Kind      []string
 	Providers []string
+	Requires  []string
 }
 
 // AptSource describes how to fetch and verify an apt Packages index, and how
@@ -99,12 +105,14 @@ type CosignBundle struct {
 // DownloadGroup is one entry under sources.Dependencies.
 //
 // Mutually exclusive fields:
-//   - Repo  vs  (Apt + an apt-derived version): version source.
+//   - Version, Repo, or Apt: version source.
 //   - HashURL  vs  Apt: digest source.
 //   - CosignSigCert  vs  CosignBundle: cosign verification layout.
 type DownloadGroup struct {
 	// GitHub repo for "latest release" version lookup.
 	Repo string
+	// Fixed upstream version for artifacts tied to the pinned OS kernel.
+	Version string
 	// URL templates. Vars: $ARCH, $VERSION (without leading "v"), $FILE.
 	FileURL string
 	// Direct hash URL for non-apt groups (GitHub-released tarballs, sha256
@@ -118,8 +126,7 @@ type DownloadGroup struct {
 	// Hash algorithm used for the manifest digest (e.g. "sha256" or "sha512").
 	HashAlg string
 	Type    DepType
-	// Apt source for verified-walk groups (libpq5, uidmap, libsubid5,
-	// fluent-bit). Mutually exclusive with HashURL.
+	// Apt source for verified-walk groups. Mutually exclusive with HashURL.
 	Apt *AptSource
 	// Optional cosign keyless verification. Set at most one of these two.
 	CosignSigCert *CosignSigCert
@@ -193,7 +200,7 @@ type OsImage struct {
 // per-kind, per-arch manifest already targets a single kind, so the
 // dependency list itself is implicitly scoped. The input catalogue
 // (FileEntry.Kind in sources.go) still carries kind metadata so a single
-// catalogue can drive both kinds' manifests, but it is filtered out before
+// catalogue can drive every kind's manifests, but it is filtered out before
 // being written to disk.
 type DependencyOutput struct {
 	Version string  `json:"version"`
@@ -226,8 +233,8 @@ type ManifestOS struct {
 
 // ManifestVMConfig is the `vmconfig` object.
 //
-// Kind is a single string (knc | knd) since each manifest is scoped to
-// one kind, OS, and arch; install.sh reads it via `jq -r '.vmconfig.kind'`.
+// Kind is a single string since each manifest is scoped to one VM kind, OS,
+// and architecture.
 type ManifestVMConfig struct {
 	Version      string                       `json:"version"`
 	Kind         string                       `json:"kind"`

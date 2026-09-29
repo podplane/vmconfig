@@ -1,0 +1,48 @@
+[Unit]
+Description=Nstance server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=nstance-server
+Group=nstance-server
+SupplementaryGroups=nstance-proxy
+EnvironmentFile=/opt/env/nstance-server.env
+ExecStart=/opt/nstance-server/bin/nstance-server \
+    --id=${NSTANCE_SERVER_ID} \
+    --shard=${NSTANCE_SERVER_SHARD} \
+    --storage=${NSTANCE_SERVER_STORAGE} \
+    --bucket=${NSTANCE_SERVER_BUCKET} \
+    --prefix=${NSTANCE_SERVER_PREFIX} \
+    --cachedir=${NSTANCE_SERVER_CACHE_DIR} \
+    --advertise-host=${NSTANCE_SERVER_ADVERTISE_HOST} \
+    --proxy-socket=${NSTANCE_SERVER_PROXY_SOCKET} \
+    --tunnel-socket=${NSTANCE_SERVER_TUNNEL_SOCKET} \
+    --server-files-dir=${NSTANCE_SERVER_FILES_DIR}
+Restart=always
+RestartSec=5s
+UMask=0077
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/nstance-server/cache /run/nstance/proxy /run/nstance/tunnel /run/nstance/files
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target

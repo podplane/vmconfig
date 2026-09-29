@@ -6,27 +6,34 @@
       "name": "debian-13",
       "arch": "arm64",
       "image": {
-        "version": "20260512-2476",
-        "url": "https://cloud.debian.org/images/cloud/trixie/20260512-2476/debian-13-genericcloud-arm64-20260512-2476.qcow2",
+        "version": "20260914-2601",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260914-2601/debian-13-genericcloud-arm64-20260914-2601.qcow2",
         "type": "qcow2",
-        "digest": "sha512:274c313ebe7923f86c4533a7c5d62a209ce793171f5d804eb6d9324c6004767d1ba0f43732d53af31ad7551bb801b8e022b3c5262a8676915bc97e9e5368110f",
-        "size": 335740928
+        "digest": "sha512:9eeabc75e74a682fcaff785f6c1f6896b486159397201f51f58298a8f95990f6debb8058b6969ca95cf6823f6e8058dd6f8589ba940a194b2780cd7f95771d69",
+        "size": 336723968
       },
       "boot": {
-        "cmdline": "root=PARTUUID=cdb3ede1-12ec-4bf5-bfd0-037823082720 ro",
+        "cmdline": "root=PARTUUID=51ebe23a-142a-4f1c-adb3-f4647ac4c9a7 ro",
         "kernel": {
           "partition": 1,
-          "path": "/boot/vmlinuz-6.12.86+deb13-cloud-arm64",
-          "digest": "sha256:2e11533c88dfde3067f95129a947176bb9779e1dfeb66f44b55dd13a84ab7953"
+          "path": "/boot/vmlinuz-6.12.107+deb13-cloud-arm64",
+          "digest": "sha256:f671b4c0ebd29ef90f9ac0d2e82eb3b7826130f7882d6f5172180fcfb5d7452b"
         },
         "initrd": {
           "partition": 1,
-          "path": "/boot/initrd.img-6.12.86+deb13-cloud-arm64",
-          "digest": "sha256:3837dfbd4dea4c47f7c502303b028f468a4105b6cf91a85742043750db010f30"
+          "path": "/boot/initrd.img-6.12.107+deb13-cloud-arm64",
+          "digest": "sha256:3c73b3ebdfb4c5a8209d1819d3247c490b4efa9ad3443569a98c49892b5f0b08"
         }
       }
     },
     "dependencies": {
+      "bpftool": {
+        "version": "7.5.0+6.12.107-1",
+        "url": "https://deb.debian.org/debian/pool/main/l/linux/bpftool_7.5.0+6.12.107-1_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:373f759cbec43cba6d2184dfca543e693bdce461e689af98879c3fcc99eb523c",
+        "size": 1632592
+      },
       "cni-plugins": {
         "version": "1.9.1",
         "url": "https://github.com/containernetworking/plugins/releases/download/v1.9.1/cni-plugins-linux-arm64-v1.9.1.tgz",
@@ -35,18 +42,18 @@
         "size": 51330810
       },
       "containerd": {
-        "version": "2.3.1",
-        "url": "https://github.com/containerd/containerd/releases/download/v2.3.1/containerd-2.3.1-linux-arm64.tar.gz",
+        "version": "2.4.1",
+        "url": "https://github.com/containerd/containerd/releases/download/v2.4.1/containerd-2.4.1-linux-arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha256:46a83603a850f3916ca7c942310daaf82ed17773a85b1d431e92d4a541e46d0d",
-        "size": 31275697
+        "digest": "sha256:67f9b0a81c7140aaf15fe69053e88175270fadd33aeaffc1b9017123c1f55cea",
+        "size": 32362079
       },
       "crictl": {
-        "version": "1.36.0",
-        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.36.0/crictl-v1.36.0-linux-arm64.tar.gz",
+        "version": "1.37.0",
+        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.37.0/crictl-v1.37.0-linux-arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha256:68328594ccf780a80ae2b092d9f6ce484eec7cf540c275242e8fd954bfd95332",
-        "size": 17571251
+        "digest": "sha256:c9dfdf9ebc353a0027c88622206a5e90ee6f0e78cfabf1a9ef4dc575298fd555",
+        "size": 17809380
       },
       "fluent-bit": {
         "version": "5.0.5",
@@ -56,46 +63,60 @@
         "size": 56527594
       },
       "kube-apiserver": {
-        "version": "1.37.0",
-        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/arm64/kube-apiserver",
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kube-apiserver",
         "type": "binary",
-        "digest": "sha256:f1229806480c919ab835f7cf1a00358203ae7578bb09950caa3334a648c77e53",
+        "digest": "sha256:c3c240bc4a0fbe3ad311ac3d74ca1d19ac411628130ea825049550fd856020d9",
         "size": 88735906
       },
       "kube-controller-manager": {
-        "version": "1.37.0",
-        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/arm64/kube-controller-manager",
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kube-controller-manager",
         "type": "binary",
-        "digest": "sha256:edbd04e271148711f997b89ffe6d8763e415170d970de9acced1306e2bbe5544",
+        "digest": "sha256:b470c3730cd8e49622c656c47ac16ef994e2edf14ba905be2dad05bc34a4e353",
         "size": 73597090
       },
       "kube-scheduler": {
-        "version": "1.37.0",
-        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/arm64/kube-scheduler",
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kube-scheduler",
         "type": "binary",
-        "digest": "sha256:f7fa56642b4897b202ab6257d8f593f7b745f07c32eaef730e4e213032ead604",
+        "digest": "sha256:1bfe0c213f015abb08131ee8a02353eb0492dfe19a965b54c5ca1145b6d05e10",
         "size": 47644834
       },
       "kubectl": {
-        "version": "1.37.0",
-        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/arm64/kubectl",
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kubectl",
         "type": "binary",
-        "digest": "sha256:922df28df248cc00a9e025f947704f1d1482de64ece54cfe57e61f19eaf1eef3",
+        "digest": "sha256:ff749f4b78d9c4f1ec87307df9b50119ed819e2094aa9810cb9acffc3286c8c7",
         "size": 57868450
       },
       "kubelet": {
-        "version": "1.37.0",
-        "url": "https://dl.k8s.io/release/v1.37.0/bin/linux/arm64/kubelet",
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kubelet",
         "type": "binary",
-        "digest": "sha256:7855ce2c3a3393d3c871fdeedcef32e38531f6852179130764763a9da79e2aa8",
+        "digest": "sha256:03e64bb3e1611d1b9ea40095b382af014bd2aa0b5f1b6670af6bbfaa0b735443",
         "size": 57082121
       },
-      "libpq5": {
-        "version": "17.9-0+deb13u1",
-        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.9-0+deb13u1_arm64.deb",
+      "libcap2": {
+        "version": "2.75-10+deb13u1+b3",
+        "url": "https://deb.debian.org/debian/pool/main/libc/libcap2/libcap2_2.75-10+deb13u1+b3_arm64.deb",
         "type": "deb",
-        "digest": "sha256:4b66131c057cfb02051c5d5a8202920c51017b4f5c046bee7a8567c70528facf",
-        "size": 221760
+        "digest": "sha256:863aa5b9cdf6f80010b48982d4639126b09a89eeef2c0c5c7be226297c811581",
+        "size": 28568
+      },
+      "libelf1t64": {
+        "version": "0.192-4",
+        "url": "https://deb.debian.org/debian/pool/main/e/elfutils/libelf1t64_0.192-4_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:815b4265c7d6c89c5bbad456bdeed7af893da6912c9d16cf4c581001927c0e37",
+        "size": 189080
+      },
+      "libpq5": {
+        "version": "17.11-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.11-0+deb13u1_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:1eb5e3126a6978446a4f02f53ce74c7ce4b7f13e48ec45adddcce1881d233458",
+        "size": 229628
       },
       "libsubid5": {
         "version": "4.17.4-2",
@@ -105,18 +126,18 @@
         "size": 218504
       },
       "netsy": {
-        "version": "1.1.0",
-        "url": "https://github.com/netsy-dev/netsy/releases/download/v1.1.0/netsy_1.1.0_linux_arm64.tar.gz",
+        "version": "1.1.1",
+        "url": "https://github.com/netsy-dev/netsy/releases/download/v1.1.1/netsy_1.1.1_linux_arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:03bb4e435863dadc5d4f5802ceb0cf1d12072723d5d4b710164168133fb9e2a5377e5e4c94567861fe509e6db5db83008b6049f9a62f88f7fa038813bc3f2a08",
-        "size": 14110217
+        "digest": "sha512:f2cc713c55cc464d241361a50eae4b4dcd0bfe28b20a1092d8a0835a7c03c42703a84fe86bbe3aca9e29c1fe2d11d70628a60da79dc4f7776ac6331e388fd961",
+        "size": 14156913
       },
       "nstance-agent": {
-        "version": "1.2.3",
-        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.2.3/nstance-agent_1.2.3_linux_arm64.tar.gz",
+        "version": "1.3.4",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.3.4/nstance-agent_1.3.4_linux_arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:6f3fb7f551167272d04b99fe7aa8f355a0a3772aafb1857348dca296242245e5ad62b78a1c7cad0f873d7c77c8990afb3d0c5ce28cb6f4c2af1a6a4795c0e71f",
-        "size": 5414840
+        "digest": "sha512:074ac0c7a6ebb73b48bf779f3805c119162fefb97cc0484aa7e06e22b7f6f8e2a16f02cc45845fc8a1156cdeba0be96327bdcf0dac1fe8c23896b771f6cbba96",
+        "size": 5414518
       },
       "registry": {
         "version": "0.1.0",
@@ -126,11 +147,11 @@
         "size": 11113184
       },
       "runc": {
-        "version": "1.4.2",
-        "url": "https://github.com/opencontainers/runc/releases/download/v1.4.2/runc.arm64",
+        "version": "1.5.2",
+        "url": "https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.arm64",
         "type": "binary",
-        "digest": "sha256:ea54032310588e115633aa2f4bba8bf9500257f657e1deca88df5778775138db",
-        "size": 11499552
+        "digest": "sha256:d10ecae898361832a059be2089bab92d158aec54661b18ed7346ed79628b46b0",
+        "size": 10091904
       },
       "uidmap": {
         "version": "4.17.4-2",
@@ -145,6 +166,13 @@
         "type": "tar.gz",
         "digest": "",
         "size": 0
+      },
+      "zlib1g": {
+        "version": "1.3.dfsg+really1.3.1-1+b1",
+        "url": "https://deb.debian.org/debian/pool/main/z/zlib/zlib1g_1.3.dfsg+really1.3.1-1+b1_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:209aa5cf671e97b9eb0410844fa6df4cae2e75b0c72e7802ab6c8ece13e6ddef",
+        "size": 85116
       }
     },
     "images": [

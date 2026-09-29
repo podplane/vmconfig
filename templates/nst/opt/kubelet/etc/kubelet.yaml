@@ -1,0 +1,12 @@
+# https://kubernetes.io/docs/reference/config-api/kubelet-config.v1beta1/
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+enableServer: false
+readOnlyPort: 0
+staticPodPath: /etc/kubernetes/manifests
+cgroupDriver: systemd
+containerRuntimeEndpoint: unix:///run/containerd/containerd.sock
+failCgroupV1: true
+failSwapOn: true
+shutdownGracePeriod: 30s
+shutdownGracePeriodCriticalPods: 10s

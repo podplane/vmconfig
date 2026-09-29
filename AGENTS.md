@@ -18,7 +18,9 @@ Prefer Makefile targets over raw commands.
   files.
 - **Precommit**: `make precommit` - run the fast local checks.
 - **Test**: `make test` - run Go tests for repository tooling.
-- **Package**: `make package` - build all `knd`/`knc` amd64/arm64 tarballs
+- **Dependencies**: `make dependencies` - validate direct dependency edges
+  against signed package metadata and regenerate `docs/dependencies.md`.
+- **Package**: `make package` - build all four VM kinds for amd64 and arm64
   under `dist/`.
 - **CI**: `make ci` - run precommit checks, Go tests, and package all artifacts.
 - **Install smoke test**: `make test-install` - run container-based install.sh
@@ -33,7 +35,8 @@ Prefer Makefile targets over raw commands.
 - **Clean**: `make clean` - remove `temp/` and `dist/`.
 
 Dependencies: Go, GNU tar (`tar` on Linux, `gtar` on macOS), `rsync`,
-`shellcheck`, `jq`, `shasum`, and Docker/Podman for `make test-install`.
+`shellcheck`, `jq`, `shasum`, mise for the pinned eBPF compiler, LLVM tools, and
+Docker/Podman for `make test-install` and `make test-integration`.
 
 ## Safety
 

@@ -35,7 +35,28 @@
 
 package main
 
-const debianRelease = "trixie" // Debian 13 (OS image + apt sources)
+const (
+	debianRelease     = "trixie" // Debian 13 (OS image + apt sources)
+	joolKernelRelease = "6.12.107+deb13"
+	joolVersion       = "4.1.15"
+)
+
+// debianPackage returns a verified Debian package dependency.
+func debianPackage(name, pool string, kinds []string, requires ...string) DownloadGroup {
+	return DownloadGroup{
+		FileURL: "https://deb.debian.org/debian/" + pool + "/$FILE_$VERSION_$ARCH.deb",
+		Apt: &AptSource{
+			BaseURL:      "https://deb.debian.org/debian/dists/" + debianRelease,
+			PackagesPath: "main/binary-$ARCH/Packages.gz",
+			Trust:        "debian-archive",
+			PoolPath:     pool,
+			PackageName:  name,
+		},
+		HashAlg: "sha256",
+		Type:    DepTypeDeb,
+		Files:   []FileEntry{{Name: name, Kind: kinds, Requires: requires}},
+	}
+}
 
 // sources is the single blueprint consumed by main.go.
 var sources = Sources{
@@ -46,6 +67,33 @@ var sources = Sources{
 		ImageBasename: "debian-13-genericcloud",
 	},
 	Dependencies: map[string]DownloadGroup{
+		"jool-modules": {
+			Version:      joolVersion,
+			FileURL:      "https://github.com/podplane/jool-builds/releases/download/jool-4.1.15-kernel-6.12.107%2Bdeb13/jool-4.1.15-6.12.107%2Bdeb13-$ARCH.tar.gz",
+			HashURL:      "https://github.com/podplane/jool-builds/releases/download/jool-4.1.15-kernel-6.12.107%2Bdeb13/SHA256SUMS",
+			HashFilename: "jool-4.1.15-6.12.107+deb13-$ARCH.tar.gz",
+			HashAlg:      "sha256",
+			Type:         DepTypeTarGz,
+			CosignBundle: &CosignBundle{
+				BundleURL:     "https://github.com/podplane/jool-builds/releases/download/jool-4.1.15-kernel-6.12.107%2Bdeb13/jool-4.1.15-6.12.107%2Bdeb13-$ARCH.sigstore.json",
+				ExpectIssuer:  "https://token.actions.githubusercontent.com",
+				ExpectSubject: "https://github.com/podplane/jool-builds/.github/workflows/build.yaml@refs/heads/main",
+			},
+			Files: []FileEntry{{Name: "jool-modules", Kind: []string{KindNat}}},
+		},
+		"jool-tools":       debianPackage("jool-tools", "pool/main/j/jool", []string{KindNat}, "libnl-3-200", "libnl-genl-3-200"),
+		"libedit2":         debianPackage("libedit2", "pool/main/libe/libedit", []string{KindNat}),
+		"libjansson4":      debianPackage("libjansson4", "pool/main/j/jansson", []string{KindNat}),
+		"libmnl0":          debianPackage("libmnl0", "pool/main/libm/libmnl", []string{KindNat}),
+		"libnftables1":     debianPackage("libnftables1", "pool/main/n/nftables", []string{KindNat}, "libjansson4", "libmnl0", "libnftnl11", "libxtables12"),
+		"libnftnl11":       debianPackage("libnftnl11", "pool/main/libn/libnftnl", []string{KindNat}, "libmnl0"),
+		"libnl-3-200":      debianPackage("libnl-3-200", "pool/main/libn/libnl3", []string{KindNat}),
+		"libnl-genl-3-200": debianPackage("libnl-genl-3-200", "pool/main/libn/libnl3", []string{KindNat}, "libnl-3-200"),
+		"libxtables12":     debianPackage("libxtables12", "pool/main/i/iptables", []string{KindNat}),
+		"nftables":         debianPackage("nftables", "pool/main/n/nftables", []string{KindNat}, "libedit2", "libnftables1"),
+		"libcap2":          debianPackage("libcap2", "pool/main/libc/libcap2", kubernetesNodeKinds),
+		"libelf1t64":       debianPackage("libelf1t64", "pool/main/e/elfutils", kubernetesNodeKinds, "zlib1g"),
+		"zlib1g":           debianPackage("zlib1g", "pool/main/z/zlib", kubernetesNodeKinds),
 		"kubernetes": {
 			Repo:    "kubernetes/kubernetes",
 			FileURL: "https://dl.k8s.io/release/v$VERSION/bin/linux/$ARCH/$FILE",
@@ -65,7 +113,7 @@ var sources = Sources{
 				{Name: "kube-apiserver", Kind: []string{KindKnc}},
 				{Name: "kube-controller-manager", Kind: []string{KindKnc}},
 				{Name: "kube-scheduler", Kind: []string{KindKnc}},
-				{Name: "kubelet", Kind: []string{KindKnc, KindKnd}},
+				{Name: "kubelet", Kind: []string{KindKnc, KindKnd, KindNst}, Requires: []string{"containerd", "uidmap"}},
 				{Name: "kubectl", Kind: []string{KindKnc}},
 			},
 		},
@@ -79,7 +127,7 @@ var sources = Sources{
 			HashFilename: "$FILE.$ARCH",
 			HashAlg:      "sha256",
 			Type:         DepTypeBinary,
-			Files:        []FileEntry{{Name: "runc", Kind: allKinds}},
+			Files:        []FileEntry{{Name: "runc", Kind: containerRuntimeKinds}},
 		},
 		"containerd": {
 			Repo:    "containerd/containerd",
@@ -92,7 +140,7 @@ var sources = Sources{
 				ExpectIssuer:  "https://token.actions.githubusercontent.com",
 				ExpectSubject: "https://github.com/containerd/containerd/.github/workflows/release.yml@refs/tags/v$VERSION",
 			},
-			Files: []FileEntry{{Name: "containerd", Kind: allKinds}},
+			Files: []FileEntry{{Name: "containerd", Kind: containerRuntimeKinds, Requires: []string{"runc"}}},
 		},
 		"cri-tools": {
 			Repo:    "kubernetes-sigs/cri-tools",
@@ -100,7 +148,7 @@ var sources = Sources{
 			HashURL: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$VERSION/$FILE-v$VERSION-linux-$ARCH.tar.gz.sha256",
 			HashAlg: "sha256",
 			Type:    DepTypeTarGz,
-			Files:   []FileEntry{{Name: "crictl", Kind: allKinds}},
+			Files:   []FileEntry{{Name: "crictl", Kind: kubernetesNodeKinds}},
 		},
 		"cni-plugins": {
 			Repo:    "containernetworking/plugins",
@@ -108,7 +156,7 @@ var sources = Sources{
 			HashURL: "https://github.com/containernetworking/plugins/releases/download/v$VERSION/$FILE-linux-$ARCH-v$VERSION.tgz.sha256",
 			HashAlg: "sha256",
 			Type:    DepTypeTarGz,
-			Files:   []FileEntry{{Name: "cni-plugins", Kind: allKinds}},
+			Files:   []FileEntry{{Name: "cni-plugins", Kind: kubernetesNodeKinds}},
 		},
 		"libpq5": {
 			// libpq5: runtime dependency for fluent-bit. Debian trixie ships
@@ -138,7 +186,7 @@ var sources = Sources{
 			},
 			HashAlg: "sha256",
 			Type:    DepTypeDeb,
-			Files:   []FileEntry{{Name: "uidmap", Kind: allKinds}},
+			Files:   []FileEntry{{Name: "uidmap", Kind: containerRuntimeKinds, Requires: []string{"libsubid5"}}},
 		},
 		"libsubid5": {
 			// libsubid5: runtime dependency for kubelet (getsubids). Debian
@@ -154,7 +202,7 @@ var sources = Sources{
 			},
 			HashAlg: "sha256",
 			Type:    DepTypeDeb,
-			Files:   []FileEntry{{Name: "libsubid5", Kind: allKinds}},
+			Files:   []FileEntry{{Name: "libsubid5", Kind: containerRuntimeKinds}},
 		},
 		"fluent-bit": {
 			Repo:    "fluent/fluent-bit",
@@ -168,7 +216,7 @@ var sources = Sources{
 			},
 			HashAlg: "sha256",
 			Type:    DepTypeDeb,
-			Files:   []FileEntry{{Name: "fluent-bit", Kind: allKinds}},
+			Files:   []FileEntry{{Name: "fluent-bit", Kind: allKinds, Requires: []string{"libpq5"}}},
 		},
 		"netsy": {
 			Repo:         "netsy-dev/netsy",
@@ -179,14 +227,32 @@ var sources = Sources{
 			Type:         DepTypeTarGz,
 			Files:        []FileEntry{{Name: "netsy", Kind: []string{KindKnc}}},
 		},
-		"nstance-agent": {
+		"nstance": {
 			Repo:         "nstance-dev/nstance",
 			FileURL:      "https://github.com/nstance-dev/nstance/releases/download/v$VERSION/$FILE_$VERSION_linux_$ARCH.tar.gz",
 			HashURL:      "https://github.com/nstance-dev/nstance/releases/download/v$VERSION/nstance_$VERSION_checksums.txt",
 			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
 			HashAlg:      "sha512",
 			Type:         DepTypeTarGz,
-			Files:        []FileEntry{{Name: "nstance-agent", Kind: allKinds}},
+			Files: []FileEntry{
+				{Name: "nstance-agent", Kind: nstanceAgentKinds},
+				{Name: "nstance-server", Kind: []string{KindNst}},
+			},
+		},
+		"bpftool": {
+			FileURL: "https://deb.debian.org/debian/pool/main/l/linux/bpftool_$VERSION_$ARCH.deb",
+			Apt: &AptSource{
+				BaseURL:      "https://deb.debian.org/debian/dists/" + debianRelease,
+				PackagesPath: "main/binary-$ARCH/Packages.gz",
+				Trust:        "debian-archive",
+				PoolPath:     "pool/main/l/linux",
+				PackageName:  "bpftool",
+			},
+			HashAlg: "sha256",
+			Type:    DepTypeDeb,
+			Files: []FileEntry{{
+				Name: "bpftool", Kind: kubernetesNodeKinds, Requires: []string{"libcap2", "libelf1t64", "zlib1g"},
+			}},
 		},
 		"registry": {
 			Repo:         "podplane/registry",
@@ -195,7 +261,7 @@ var sources = Sources{
 			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
 			HashAlg:      "sha512",
 			Type:         DepTypeTarGz,
-			Files:        []FileEntry{{Name: "registry", Kind: allKinds}},
+			Files:        []FileEntry{{Name: "registry", Kind: containerRuntimeKinds}},
 		},
 	},
 	Images: []ImageSource{

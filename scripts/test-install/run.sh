@@ -23,8 +23,8 @@ set -euo pipefail
 KIND="${1:-}"
 [ -n "$KIND" ] || { echo "usage: $0 <kind>" >&2; exit 1; }
 case "$KIND" in
-  knd|knc) ;;
-  *) echo "kind must be knd or knc" >&2; exit 1 ;;
+  knd|knc|nst|nat) ;;
+  *) echo "kind must be knd, knc, nst, or nat" >&2; exit 1 ;;
 esac
 
 OS_NAME="debian-13"

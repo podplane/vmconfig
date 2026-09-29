@@ -15,6 +15,9 @@ SHELL := /bin/bash
 TEMP_DIR := temp
 DIST_DIR := dist
 OS_NAME  := debian-13
+MISE ?= mise
+BPF_SOURCE := templates/knd/opt/nstance-counters/src/active-connections.bpf.c
+BPF_OBJECT := templates/knd/opt/nstance-counters/lib/active-connections.bpf.o
 # PODPLANE_CLI ?= podplane
 PODPLANE_CLI ?= go -C $(CURDIR)/../podplane run .
 
@@ -22,6 +25,8 @@ PODPLANE_CLI ?= go -C $(CURDIR)/../podplane run .
 # this on the command line (e.g. `make package-knc VERSION=1.0.0`); local
 # dev builds keep the conventional "dev" marker, same as manifest stubs.
 VERSION ?= dev
+KINDS := knd knc nst nat
+ARCHS := amd64 arm64
 
 # GNU tar is required for --owner/--group/--mtime/--sort (reproducible
 # tarballs). macOS ships BSD tar; install gtar via Homebrew. Linux ships
@@ -45,11 +50,11 @@ RSYNC_FLAGS := -a
 # engine's native platform.
 HOST_ARCH := $(shell uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
 
-.PHONY: help setup lint precommit test ci update-manifests update-trust \
-        build build-knd build-knc \
-        package package-knd package-knc \
-        package-knd-amd64 package-knd-arm64 package-knc-amd64 package-knc-arm64 \
-        test-install test-install-knd test-install-knc \
+.PHONY: help setup lint precommit test test-integration ci dependencies update-manifests update-trust \
+        build build-bpf check-bpf \
+        package $(addprefix package-,$(KINDS)) \
+        $(foreach kind,$(KINDS),$(foreach arch,$(ARCHS),package-$(kind)-$(arch))) \
+        test-install $(addprefix test-install-,$(KINDS)) \
         local-sync knd-sync knc-sync \
         local-watch knd-watch knc-watch \
         clean
@@ -112,10 +117,18 @@ lint: ## Run shellcheck on all shell scripts under templates/ and scripts/
 precommit: ## Run all pre-commit checks (lint)
 	@$(MAKE) lint
 
-test: ## Run Go tests
+test: ## Run Go and host-side behavior tests
 	go test ./...
+	scripts/test-nstance-counters.sh
+	tests/nat-host.sh
 
-ci: precommit test package ## Run CI checks and build all package artifacts
+test-integration: build-bpf ## Run privileged Linux networking and eBPF tests in Docker
+	tests/linux-integration.sh
+
+ci: precommit check-bpf test package ## Run CI checks and build all package artifacts
+
+dependencies: ## Validate dependency edges and regenerate docs/dependencies.md
+	go run ./scripts/manifests --trust-dir=./trust --dependencies-only
 
 update-manifests: ## Refresh manifests/<kind>.<os>.<arch>.json (verified via gpg + cosign)
 	@mkdir -p $(TEMP_DIR)
@@ -139,30 +152,45 @@ update-trust: ## Refresh vmconfig/trust/*.asc keyring files
 # created during build so the tarball carries a proper directory entry
 # for the manifest's parent.
 #
-# knc inherits knd's tree via overlay rsync (knd/ first, then knc/), so
-# any file present in templates/knc/ overrides its knd counterpart.
+# Overlay order is intentionally explicit: common, the shared container
+# runtime for every kind except nat, the knd base for knc, then the kind.
+build: $(addprefix build-,$(KINDS)) ## Build all kind trees under ./dist/
 
-build: build-knd build-knc ## Build both kind trees under ./dist/
+build-bpf: ## Rebuild the packaged active-connection eBPF object
+	@command -v $(MISE) >/dev/null 2>&1 || { echo "Error: mise is required to install pinned Clang" >&2; exit 1; }
+	$(MISE) install clang
+	@$(MISE) exec -- clang -print-targets | grep -qE '^[[:space:]]+bpf[[:space:]]' || { echo "Error: pinned Clang does not support BPF" >&2; exit 1; }
+	@PATH="$$($(MISE) where clang)/bin:$$PATH"; command -v llvm-strip >/dev/null 2>&1 || { echo "Error: llvm-strip is required" >&2; exit 1; }
+	mkdir -p $(dir $(BPF_OBJECT))
+	$(MISE) exec -- clang -O2 -g -target bpfel -fdebug-prefix-map=$(CURDIR)=. \
+	  -c $(BPF_SOURCE) -o $(BPF_OBJECT)
+	PATH="$$($(MISE) where clang)/bin:$$PATH" llvm-strip --strip-debug $(BPF_OBJECT)
 
-build-knd: setup ## Build ./dist/knd from ./templates/knd
-	@mkdir -p $(DIST_DIR)
-	rm -rf $(DIST_DIR)/knd
-	mkdir -p $(DIST_DIR)/knd
-	rsync $(RSYNC_FLAGS) templates/knd/ $(DIST_DIR)/knd/
-	mkdir -p $(DIST_DIR)/knd/opt/podplane/share
-	# note: install.sh file perms check and tar diff depend on this
-	chmod 0755 $(DIST_DIR)/knd/opt/podplane/bin/*.sh
+check-bpf: ## Verify the packaged eBPF object matches its source
+	@command -v $(MISE) >/dev/null 2>&1 || { echo "Error: mise is required to install pinned Clang" >&2; exit 1; }
+	$(MISE) install clang
+	@$(MISE) exec -- clang -print-targets | grep -qE '^[[:space:]]+bpf[[:space:]]' || { echo "Error: pinned Clang does not support BPF" >&2; exit 1; }
+	@PATH="$$($(MISE) where clang)/bin:$$PATH"; command -v llvm-strip >/dev/null 2>&1 || { echo "Error: llvm-strip is required" >&2; exit 1; }
+	@mkdir -p $(TEMP_DIR)
+	@$(MISE) exec -- clang -O2 -g -target bpfel -fdebug-prefix-map=$(CURDIR)=. \
+	  -c $(BPF_SOURCE) -o $(TEMP_DIR)/active-connections.bpf.o
+	@PATH="$$($(MISE) where clang)/bin:$$PATH" llvm-strip --strip-debug $(TEMP_DIR)/active-connections.bpf.o
+	@cmp $(BPF_OBJECT) $(TEMP_DIR)/active-connections.bpf.o || { \
+	  echo "Error: $(BPF_OBJECT) is stale; run 'make build-bpf'" >&2; \
+	  exit 1; \
+	}
 
-build-knc: setup ## Build ./dist/knc from ./templates/{knd,knc} (knc overlays knd)
-	@mkdir -p $(DIST_DIR)
-	rm -rf $(DIST_DIR)/knc
-	mkdir -p $(DIST_DIR)/knc
-	rsync $(RSYNC_FLAGS) templates/knd/ $(DIST_DIR)/knc/
-	mkdir -p templates/knc
-	rsync $(RSYNC_FLAGS) templates/knc/ $(DIST_DIR)/knc/
-	mkdir -p $(DIST_DIR)/knc/opt/podplane/share
-	# note: install.sh file perms check and tar diff depend on this
-	chmod 0755 $(DIST_DIR)/knc/opt/podplane/bin/*.sh
+build-%: setup
+	@case "$*" in knd|knc|nst|nat) ;; *) echo "unsupported kind: $*" >&2; exit 1;; esac
+	rm -rf $(DIST_DIR)/$*
+	mkdir -p $(DIST_DIR)/$*
+	rsync $(RSYNC_FLAGS) templates/common/ $(DIST_DIR)/$*/
+	@if [ "$*" != nat ]; then rsync $(RSYNC_FLAGS) templates/container-runtime/ $(DIST_DIR)/$*/; fi
+	@if [ "$*" = knc ]; then rsync $(RSYNC_FLAGS) templates/knd/ $(DIST_DIR)/$*/; fi
+	rsync $(RSYNC_FLAGS) templates/$*/ $(DIST_DIR)/$*/
+	@if [ "$*" = nat ]; then rm $(DIST_DIR)/$*/opt/podplane/lib/configure/containerd.sh; fi
+	mkdir -p $(DIST_DIR)/$*/opt/podplane/share
+	chmod 0755 $(DIST_DIR)/$*/opt/podplane/bin/*.sh
 
 # ---------------------------------------------------------------------------
 # Package targets
@@ -185,71 +213,22 @@ build-knc: setup ## Build ./dist/knc from ./templates/{knd,knc} (knc overlays kn
 # via --transform, so the tarball ships exactly one manifest/install plan pair
 # regardless of which arch was injected.
 
-package: package-knd package-knc
+package: $(addprefix package-,$(KINDS)) ## Package every kind and architecture
 
-package-knd: package-knd-amd64 package-knd-arm64 ## Package both knd arch tarballs
+$(foreach kind,$(KINDS),$(eval package-$(kind): $(addprefix package-$(kind)-,$(ARCHS))))
 
-package-knc: package-knc-amd64 package-knc-arm64 ## Package both knc arch tarballs
-
-package-knd-amd64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_amd64.tar.gz
+define PACKAGE_template
+package-$(1)-$(2): setup build-$(1)
 	@mkdir -p $(DIST_DIR)/manifests
-	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  manifests/knd.$(OS_NAME).amd64.json > $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.json
-	scripts/manifests.sh \
-	  $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.json \
-	  $(DIST_DIR)/manifests/knd.$(OS_NAME).amd64.sh
+	jq --arg v "$(VERSION)" '.vmconfig.version = $$$$v | .vmconfig.dependencies.vmconfig.version = $$$$v' manifests/$(1).$(OS_NAME).$(2).json > $(DIST_DIR)/manifests/$(1).$(OS_NAME).$(2).json
+	scripts/manifests.sh $(DIST_DIR)/manifests/$(1).$(OS_NAME).$(2).json $(DIST_DIR)/manifests/$(1).$(OS_NAME).$(2).sh
 	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knd\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
-	  --transform 's|^knd\.$(OS_NAME)\.amd64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
-	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz \
-	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR)/$(DIST_DIR)/manifests knd.$(OS_NAME).amd64.json knd.$(OS_NAME).amd64.sh
-	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_amd64.tar.gz"
-
-package-knd-arm64: setup build-knd ## Package -> vmconfig_<VER>_knd_<os>_arm64.tar.gz
-	@mkdir -p $(DIST_DIR)/manifests
-	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  manifests/knd.$(OS_NAME).arm64.json > $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.json
-	scripts/manifests.sh \
-	  $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.json \
-	  $(DIST_DIR)/manifests/knd.$(OS_NAME).arm64.sh
-	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knd\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
-	  --transform 's|^knd\.$(OS_NAME)\.arm64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
-	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz \
-	  -C $(DIST_DIR)/knd . \
-	  -C $(CURDIR)/$(DIST_DIR)/manifests knd.$(OS_NAME).arm64.json knd.$(OS_NAME).arm64.sh
-	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knd_$(OS_NAME)_arm64.tar.gz"
-
-package-knc-amd64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_amd64.tar.gz
-	@mkdir -p $(DIST_DIR)/manifests
-	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  manifests/knc.$(OS_NAME).amd64.json > $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.json
-	scripts/manifests.sh \
-	  $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.json \
-	  $(DIST_DIR)/manifests/knc.$(OS_NAME).amd64.sh
-	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knc\.$(OS_NAME)\.amd64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
-	  --transform 's|^knc\.$(OS_NAME)\.amd64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
-	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz \
-	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR)/$(DIST_DIR)/manifests knc.$(OS_NAME).amd64.json knc.$(OS_NAME).amd64.sh
-	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_amd64.tar.gz"
-
-package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.tar.gz
-	@mkdir -p $(DIST_DIR)/manifests
-	jq --arg v "$(VERSION)" '.vmconfig.version = $$v | .vmconfig.dependencies.vmconfig.version = $$v' \
-	  manifests/knc.$(OS_NAME).arm64.json > $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.json
-	scripts/manifests.sh \
-	  $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.json \
-	  $(DIST_DIR)/manifests/knc.$(OS_NAME).arm64.sh
-	$(TAR) $(TAR_FLAGS) \
-	  --transform 's|^knc\.$(OS_NAME)\.arm64\.json$$|./opt/podplane/share/vmconfig-manifest.json|' \
-	  --transform 's|^knc\.$(OS_NAME)\.arm64\.sh$$|./opt/podplane/share/vmconfig-manifest.sh|' \
-	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz \
-	  -C $(DIST_DIR)/knc . \
-	  -C $(CURDIR)/$(DIST_DIR)/manifests knc.$(OS_NAME).arm64.json knc.$(OS_NAME).arm64.sh
-	@echo "Wrote $(DIST_DIR)/vmconfig_$(VERSION)_knc_$(OS_NAME)_arm64.tar.gz"
+	  --transform 's|^$(1)\.$(OS_NAME)\.$(2)\.json$$$$|./opt/podplane/share/vmconfig-manifest.json|' \
+	  --transform 's|^$(1)\.$(OS_NAME)\.$(2)\.sh$$$$|./opt/podplane/share/vmconfig-manifest.sh|' \
+	  -cf $(DIST_DIR)/vmconfig_$(VERSION)_$(1)_$(OS_NAME)_$(2).tar.gz \
+	  -C $(DIST_DIR)/$(1) . -C $(CURDIR)/$(DIST_DIR)/manifests $(1).$(OS_NAME).$(2).json $(1).$(OS_NAME).$(2).sh
+endef
+$(foreach kind,$(KINDS),$(foreach arch,$(ARCHS),$(eval $(call PACKAGE_template,$(kind),$(arch)))))
 
 # ---------------------------------------------------------------------------
 # Test targets
@@ -267,7 +246,7 @@ package-knc-arm64: setup build-knc ## Package -> vmconfig_<VER>_knc_<os>_arm64.t
 # container entrypoint copies it into /opt/podplane/artifacts so install.sh's
 # rm -rf at the end cannot touch the host cache.
 
-test-install: test-install-knd test-install-knc ## Run install.sh test for both kinds
+test-install: $(addprefix test-install-,$(KINDS)) ## Run install.sh test for all kinds
 
 test-install-knd: package-knd-$(HOST_ARCH) ## Run install.sh in a debian container for knd
 	@mkdir -p $(TEMP_DIR)
@@ -278,6 +257,14 @@ test-install-knc: package-knc-$(HOST_ARCH) ## Run install.sh in a debian contain
 	@mkdir -p $(TEMP_DIR)
 	@rm -f $(TEMP_DIR)/test-install-knc.log
 	scripts/test-install/run.sh knc 2>&1 | tee $(TEMP_DIR)/test-install-knc.log
+
+test-install-nst: package-nst-$(HOST_ARCH) ## Run install.sh in a debian container for nst
+	@mkdir -p $(TEMP_DIR); rm -f $(TEMP_DIR)/test-install-nst.log
+	scripts/test-install/run.sh nst 2>&1 | tee $(TEMP_DIR)/test-install-nst.log
+
+test-install-nat: package-nat-$(HOST_ARCH) ## Run install.sh in a debian container for nat
+	@mkdir -p $(TEMP_DIR); rm -f $(TEMP_DIR)/test-install-nat.log
+	scripts/test-install/run.sh nat 2>&1 | tee $(TEMP_DIR)/test-install-nat.log
 
 clean: ## Remove the temp/ and dist/ directories
 	rm -rf $(TEMP_DIR) $(DIST_DIR)

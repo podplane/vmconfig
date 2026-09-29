@@ -24,8 +24,8 @@ ARCH="${2:-}"
 
 [ -n "$KIND" ] || { echo "usage: $0 <kind> [<arch>]" >&2; exit 1; }
 case "$KIND" in
-  knd|knc) ;;
-  *) echo "kind must be knd or knc" >&2; exit 1 ;;
+  knd|knc|nst|nat) ;;
+  *) echo "kind must be knd, knc, nst, or nat" >&2; exit 1 ;;
 esac
 
 if [ -z "$ARCH" ]; then
@@ -40,9 +40,9 @@ OS_NAME="debian-13"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MANIFEST="$REPO_ROOT/manifests/${KIND}.${OS_NAME}.${ARCH}.json"
-CACHE_DIR="$REPO_ROOT/temp/deps-cache/${KIND}/${OS_NAME}/${ARCH}"
 
 [ -f "$MANIFEST" ] || { echo "missing manifest: $MANIFEST" >&2; exit 1; }
+CACHE_DIR="$REPO_ROOT/temp/deps-cache/${KIND}/${OS_NAME}/${ARCH}"
 
 for tool in jq curl shasum; do
   command -v "$tool" >/dev/null 2>&1 || {

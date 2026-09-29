@@ -10,6 +10,10 @@ The published packages vary the VM configuration based on the desired VM "kind":
 
 - `knc` creates a Kubernetes Control Plane node, which is essentially a base of `knd` + adds [netsy](https://netsy.dev) (as an etcd alternative), kube-apiserver, kube-scheduler, kube-controller-manager, etc.
 
+- `nst` creates an [Nstance Server](https://nstance.dev/docs/components/nstance-server/) VM.
+
+- `nat` creates a dedicated NAT VM.
+
 The VM cloud-init user-data script is responsible for downloading and verifying all dependencies required for its nominated VM kind, and invoking the `vmconfig` package's `install.sh` then `configure.sh` entrypoints.
 
 The full list of dependencies per VM kind, OS, and architecture is published as a `vmconfig-manifest.json` manifest inside each vmconfig tarball.
@@ -22,12 +26,17 @@ VMs are responsible for:
   3. Invoking `/opt/podplane/bin/install.sh` (verifies + installs artifacts, can be used for preparing machine images)
   4. (Optional) Writing any vmconfig runtime settings/environment variables to `/opt/podplane/etc/user-data.env`
   5. (Optional) Writing any sensitive bootstrap files required by individual services (e.g. `/opt/nstance-agent/identity/nonce.jwt`)
-  6. Invoking `/opt/podplane/bin/configure.sh` (idempotent per-boot configuration)
-  7. Invoking `/opt/podplane/bin/restart.sh` (idempotent per-boot service (re)start)
+  6. (Optional, `knc`) Writing VM-lifecycle-owned production tunnel static Pod manifests under `/etc/kubernetes/manifests` and root-only mounted files under `/opt/podplane/tunnel/files`
+  7. Invoking `/opt/podplane/bin/configure.sh` (idempotent per-boot configuration)
+  8. Invoking `/opt/podplane/bin/restart.sh` (idempotent per-boot service (re)start)
 
 Note that the outcome of 1, 2, & 3 can be bundled into a machine image (e.g. an AMI on AWS).
 
-The VM kind (`knd` or `knc`) is read from `vmconfig.kind` in `/opt/podplane/share/vmconfig-manifest.json` (and after install, from `/opt/podplane/share/vmconfig-installed.json`).
+Kubelet watches `/etc/kubernetes/manifests` for static Pods on `knd`, `knc`, and `nst` VMs. On `nst`, the Nstance tunnel command constructs fixed hardened manifests from configured digest-pinned images, arguments, and protected file mounts. Deployment configuration owns production tunnel manifests on `knc` VMs.
+
+The VM kind (`knd`, `knc`, `nst`, or `nat`) is read from `vmconfig.kind` in `/opt/podplane/share/vmconfig-manifest.json` (and after install, from `/opt/podplane/share/vmconfig-installed.json`). Kubernetes node manifests always include the active connection counters; configuration enables them only when `NSTANCE_EBPF_PORTS` contains production listener ports.
+
+[`docs/dependencies.md`](./docs/dependencies.md) records each VM kind's artifact sources and bundled dependency chains. Regenerate it with `make dependencies`; Debian package edges are checked against signed repository metadata.
 
 `install.sh`, `configure.sh`, and `restart.sh` are designed to be idempotent. They handle checking all dependencies, installing them, configuring the system, and (re)starting services as needed.
 

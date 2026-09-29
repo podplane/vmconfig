@@ -1,0 +1,111 @@
+{
+  "vmconfig": {
+    "version": "dev",
+    "kind": "nst",
+    "os": {
+      "name": "debian-13",
+      "arch": "arm64",
+      "image": {
+        "version": "20260914-2601",
+        "url": "https://cloud.debian.org/images/cloud/trixie/20260914-2601/debian-13-genericcloud-arm64-20260914-2601.qcow2",
+        "type": "qcow2",
+        "digest": "sha512:9eeabc75e74a682fcaff785f6c1f6896b486159397201f51f58298a8f95990f6debb8058b6969ca95cf6823f6e8058dd6f8589ba940a194b2780cd7f95771d69",
+        "size": 336723968
+      },
+      "boot": {
+        "cmdline": "root=PARTUUID=51ebe23a-142a-4f1c-adb3-f4647ac4c9a7 ro",
+        "kernel": {
+          "partition": 1,
+          "path": "/boot/vmlinuz-6.12.107+deb13-cloud-arm64",
+          "digest": "sha256:f671b4c0ebd29ef90f9ac0d2e82eb3b7826130f7882d6f5172180fcfb5d7452b"
+        },
+        "initrd": {
+          "partition": 1,
+          "path": "/boot/initrd.img-6.12.107+deb13-cloud-arm64",
+          "digest": "sha256:3c73b3ebdfb4c5a8209d1819d3247c490b4efa9ad3443569a98c49892b5f0b08"
+        }
+      }
+    },
+    "dependencies": {
+      "containerd": {
+        "version": "2.4.1",
+        "url": "https://github.com/containerd/containerd/releases/download/v2.4.1/containerd-2.4.1-linux-arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:67f9b0a81c7140aaf15fe69053e88175270fadd33aeaffc1b9017123c1f55cea",
+        "size": 32362079
+      },
+      "fluent-bit": {
+        "version": "5.1.2",
+        "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.1.2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:62256ada63bd94aa4e88a3d9f981a2b6ae311016dfb40915d73a81e44ea0647a",
+        "size": 60335872
+      },
+      "kubelet": {
+        "version": "1.37.1",
+        "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kubelet",
+        "type": "binary",
+        "digest": "sha256:03e64bb3e1611d1b9ea40095b382af014bd2aa0b5f1b6670af6bbfaa0b735443",
+        "size": 57082121
+      },
+      "libpq5": {
+        "version": "17.11-0+deb13u1",
+        "url": "https://deb.debian.org/debian/pool/main/p/postgresql-17/libpq5_17.11-0+deb13u1_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:1eb5e3126a6978446a4f02f53ce74c7ce4b7f13e48ec45adddcce1881d233458",
+        "size": 229628
+      },
+      "libsubid5": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/libsubid5_4.17.4-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:0cbd234e3e1afad8195cf12d87c7eb820a3e55b252e48da930cd9f0df3e787c1",
+        "size": 218504
+      },
+      "nstance-server": {
+        "version": "1.3.4",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.3.4/nstance-server_1.3.4_linux_arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:571e69062d898c25ef150d740ff4697092cd703362b76aecc4b26891acdc9bb386f071da1f4c695901a63a8202eb103f7ee24f906e118000f33c62157808fb70",
+        "size": 21925128
+      },
+      "registry": {
+        "version": "0.1.0",
+        "url": "https://github.com/podplane/registry/releases/download/v0.1.0/registry_0.1.0_linux_arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:6b68de6ccf0cf185ebc5b06ff5a4069b3ae443a1652f285558d5eaebeea8908a7c35acfce701e4951af5f688e128365905ad55ba751b9cd259f220633bc24e41",
+        "size": 11113184
+      },
+      "runc": {
+        "version": "1.5.2",
+        "url": "https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.arm64",
+        "type": "binary",
+        "digest": "sha256:d10ecae898361832a059be2089bab92d158aec54661b18ed7346ed79628b46b0",
+        "size": 10091904
+      },
+      "uidmap": {
+        "version": "4.17.4-2",
+        "url": "https://deb.debian.org/debian/pool/main/s/shadow/uidmap_4.17.4-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:e06aab52f0586f6f0fabf1ab1b4f946e18796d1cea837201f11346a25dc3ce3c",
+        "size": 192832
+      },
+      "vmconfig": {
+        "version": "dev",
+        "url": "",
+        "type": "tar.gz",
+        "digest": "",
+        "size": 0
+      }
+    },
+    "images": [
+      {
+        "image": "registry.k8s.io/pause:3.10.2",
+        "digest": "sha256:a433214620b407678934ebd69690a9ed6066247231eacfba181fab20dbc3dbf1",
+        "size": 265534,
+        "platform": "linux/arm64",
+        "index": "sha256:f548e0e8e3dc1896ca956272154dde3314e8cc4fde0a57577ee9fa1c63f5baf4"
+      }
+    ]
+  }
+}

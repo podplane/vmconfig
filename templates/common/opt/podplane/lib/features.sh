@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Podplane <https://podplane.dev>
+# Copyright The Podplane Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Shared service predicates used by lifecycle scripts.
+
+# nstance_counters_enabled returns true when production ports need active connection counters.
+nstance_counters_enabled() {
+  local ports="${NSTANCE_EBPF_PORTS:-}"
+  [ -n "${ports//[[:space:],]/}" ]
+}
+
+# fluent_bit_enabled returns true when fluent-bit should collect and upload logs.
+fluent_bit_enabled() {
+  [ "${TELEMETRY_ENABLED:-false}" = true ]
+}
+
+# registry_enabled returns true when the local registry service should run.
+registry_enabled() {
+  [ "${REGISTRY_ENABLED:-true}" = true ] &&
+    [ -n "${REGISTRY_HOSTNAME:-}" ] &&
+    [ -n "${REGISTRY_BUCKET:-}" ]
+}
+
+# netsy_enabled returns true on control-plane nodes that run Netsy.
+netsy_enabled() {
+  [ "${VMCONFIG_KIND:-}" = "knc" ] && [ -n "${NETSY_BUCKET:-}" ]
+}
+
+# kube_apiserver_enabled returns true on control-plane nodes.
+kube_apiserver_enabled() {
+  [ "${VMCONFIG_KIND:-}" = "knc" ]
+}
+
+# kube_controller_manager_enabled returns true on control-plane nodes.
+kube_controller_manager_enabled() {
+  [ "${VMCONFIG_KIND:-}" = "knc" ]
+}
+
+# kube_scheduler_enabled returns true on control-plane nodes.
+kube_scheduler_enabled() {
+  [ "${VMCONFIG_KIND:-}" = "knc" ]
+}
+
+# kube2iam_enabled returns true on AWS nodes.
+kube2iam_enabled() {
+  [ "${PROVIDER_KIND:-}" = "aws" ]
+}

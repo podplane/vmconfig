@@ -5,22 +5,22 @@
 # Release workflow: builds + publishes vmconfig artifacts on tag push.
 #
 # For tag vX.Y.Z (or vX.Y.Z-rcN for pre-releases), this:
-#   1. Builds the four arch/kind tarballs via `make package VERSION=X.Y.Z`.
+#   1. Builds the eight arch/kind tarballs via `make package VERSION=X.Y.Z`.
 #      The Makefile bakes the version into each tarball's embedded
 #      /opt/podplane/share/vmconfig-manifest.json.
-#   2. Generates four standalone dependency manifests under dist/ from the
+#   2. Generates eight standalone dependency manifests under dist/ from the
 #      versioned package manifests staged under dist/manifests/; they
 #      additionally contain a .vmconfig.dependencies.vmconfig entry with
 #      the URL + sha256 digest + size of the matching tarball — the
 #      self-reference VMs need to fetch + verify vmconfig.tar.gz before
 #      extraction.
 #   3. Writes vmconfig_<VERSION>_checksums.txt (sha512) covering all
-#      eight artifacts and signs it keyless with cosign (Fulcio + Rekor
+#      sixteen artifacts and signs it keyless with cosign (Fulcio + Rekor
 #      via GitHub OIDC), producing a single self-contained sigstore bundle
 #      named vmconfig_<VERSION>_checksums.txt.bundle.
 #   4. Creates a GitHub Release with auto-generated notes and uploads:
-#         - 4 tarballs
-#         - 4 standalone .json manifests
+#         - 8 tarballs
+#         - 8 standalone .json manifests
 #         - vmconfig_<VERSION>_checksums.txt
 #         - vmconfig_<VERSION>_checksums.txt.bundle
 
@@ -74,7 +74,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          for kind in knd knc; do
+          for kind in knd knc nst nat; do
             for arch in amd64 arm64; do
               tarball="vmconfig_${VERSION}_${kind}_debian-13_${arch}.tar.gz"
               digest="sha256:$(sha256sum "dist/${tarball}" | awk '{print $1}')"

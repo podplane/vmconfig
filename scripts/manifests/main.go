@@ -44,6 +44,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -52,9 +53,12 @@ import (
 )
 
 var (
-	manifestsDir = flag.String("manifests-dir", "./manifests", "Directory holding the manifest files (vmconfig/manifests).")
-	trustDir     = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
-	cacheDir     = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
+	manifestsDir     = flag.String("manifests-dir", "./manifests", "Directory holding the manifest files (vmconfig/manifests).")
+	trustDir         = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
+	cacheDir         = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
+	dependenciesDoc  = flag.String("dependencies-doc", "./docs/dependencies.md", "Generated dependency reference path.")
+	dependenciesOnly = flag.Bool("dependencies-only", false,
+		"Validate dependency metadata and regenerate its reference without updating manifests.")
 )
 
 // ----- generic helpers -----
@@ -861,44 +865,43 @@ func ensureBaseFile(kind, arch string) error {
 
 // ----- OS boot metadata (qcow2/ext4 extraction) -----
 
-// processOsBoot inspects the OS qcow2 image to extract boot metadata
-// (kernel path, initrd path, cmdline, digests). It reuses a verified cached
-// qcow2 image, converts it to raw with qemu-img, and uses go-diskfs for
-// partition/filesystem access.
-//
-// The extracted metadata is written into the manifest's os.boot field.
+// processOsBoot inspects each distinct OS qcow2 image to extract boot metadata
+// (kernel path, initrd path, cmdline, and digests). It reuses verified cached
+// images, converts them to raw with qemu-img, and uses go-diskfs for partition
+// and filesystem access. Images shared by multiple kinds are inspected once,
+// and the metadata is written to each manifest's os.boot field. NAT images
+// must match the kernel used by the packaged Jool modules.
 func processOsBoot() error {
 	for _, arch := range Archs {
-		// Read image URL from any manifest (same for all kinds).
-		m, err := readManifest(allKinds[0], arch)
-		if err != nil {
-			return err
-		}
-		if m.VMConfig.OS.Image == nil {
-			continue
-		}
-		imageURL := m.VMConfig.OS.Image.URL
-		imagePath, _, err := cachedDownload(
-			imageURL,
-			fmt.Sprintf("os-image/%s", arch),
-			arch,
-			"os-image",
-			m.VMConfig.OS.Image.Digest,
-		)
-		if err != nil {
-			return fmt.Errorf("cache OS image for boot inspection: %w", err)
-		}
-
-		boot, err := extractBootMetadata(imagePath, arch)
-		if err != nil {
-			return fmt.Errorf("extract boot metadata for %s: %w", arch, err)
-		}
-
-		// Write boot metadata into all kind manifests for this arch.
+		boots := map[string]*Boot{}
 		for _, kind := range allKinds {
 			m, err := readManifest(kind, arch)
 			if err != nil {
 				return err
+			}
+			if m.VMConfig.OS.Image == nil {
+				continue
+			}
+			boot, ok := boots[m.VMConfig.OS.Image.Digest]
+			if !ok {
+				imagePath, _, err := cachedDownload(
+					m.VMConfig.OS.Image.URL,
+					fmt.Sprintf("os-image/%s", arch),
+					arch,
+					"os-image",
+					m.VMConfig.OS.Image.Digest,
+				)
+				if err != nil {
+					return fmt.Errorf("cache OS image for boot inspection: %w", err)
+				}
+				boot, err = extractBootMetadata(imagePath, arch)
+				if err != nil {
+					return fmt.Errorf("extract boot metadata for %s: %w", arch, err)
+				}
+				boots[m.VMConfig.OS.Image.Digest] = boot
+			}
+			if kind == KindNat && !strings.HasSuffix(boot.Kernel.Path, joolKernelRelease+"-cloud-"+arch) {
+				return fmt.Errorf("nat OS kernel %s does not match Jool modules for %s", boot.Kernel.Path, joolKernelRelease)
 			}
 			if reflect.DeepEqual(m.VMConfig.OS.Boot, boot) {
 				continue
@@ -1042,50 +1045,45 @@ func parseGrubCfg(cfg string) (kernel, initrd, cmdline string, err error) {
 	return kernel, initrd, cmdline, nil
 }
 
+// processOsImage ensures every VM kind uses the same OS image for an
+// architecture. It preserves an existing shared pin, or resolves one image
+// when none is pinned.
 func processOsImage() error {
-	// The OS image is identical across kinds for a given arch, so we resolve
-	// it once per arch and write it into every per-kind, per-arch manifest.
-	resolved := map[string]*OsImage{}
 	for _, arch := range Archs {
-		needArch := false
+		manifests := make(map[string]*Manifest, len(allKinds))
+		var image *OsImage
 		for _, kind := range allKinds {
 			m, err := readManifest(kind, arch)
 			if err != nil {
 				return err
 			}
+			manifests[kind] = m
 			if m.VMConfig.OS.Image == nil || m.VMConfig.OS.Image.Size <= 0 {
-				needArch = true
-				break
-			}
-		}
-		if !needArch {
-			continue
-		}
-		fmt.Printf("[%s] resolving os.image...\n", arch)
-		img, err := fetchOsImage(arch)
-		if err != nil {
-			return err
-		}
-		resolved[arch] = img
-	}
-	for _, arch := range Archs {
-		img, ok := resolved[arch]
-		if !ok {
-			continue
-		}
-		for _, kind := range allKinds {
-			m, err := readManifest(kind, arch)
-			if err != nil {
-				return err
-			}
-			if m.VMConfig.OS.Image != nil && m.VMConfig.OS.Image.Size > 0 {
 				continue
 			}
-			m.VMConfig.OS.Image = img
+			if image != nil && !reflect.DeepEqual(image, m.VMConfig.OS.Image) {
+				return fmt.Errorf("OS images for %s disagree: all VM kinds must use one image", arch)
+			}
+			image = m.VMConfig.OS.Image
+		}
+		if image == nil {
+			fmt.Printf("[%s] resolving os.image...\n", arch)
+			var err error
+			image, err = fetchOsImage(arch)
+			if err != nil {
+				return err
+			}
+		}
+		for _, kind := range allKinds {
+			m := manifests[kind]
+			if reflect.DeepEqual(m.VMConfig.OS.Image, image) {
+				continue
+			}
+			m.VMConfig.OS.Image = image
 			if err := writeManifest(kind, arch, m); err != nil {
 				return err
 			}
-			fmt.Printf("[%s/%s]   + os.image (%s)\n", kind, arch, img.Version)
+			fmt.Printf("[%s/%s]   + os.image (%s)\n", kind, arch, image.Version)
 		}
 	}
 	return nil
@@ -1151,12 +1149,63 @@ func fileAppliesToKind(file FileEntry, kind string) bool {
 	return false
 }
 
+// reconcileManifestScope removes dependencies and images that no longer apply
+// after a catalogue entry changes kind scope.
+func reconcileManifestScope() error {
+	for _, kind := range allKinds {
+		dependencies := map[string]bool{"vmconfig": true}
+		for _, group := range sources.Dependencies {
+			for _, file := range group.Files {
+				if fileAppliesToKind(file, kind) {
+					dependencies[file.Name] = true
+				}
+			}
+		}
+		images := map[string]bool{}
+		if slices.Contains(containerRuntimeKinds, kind) {
+			for _, image := range sources.Images {
+				images[image.Image] = true
+			}
+		}
+		for _, arch := range Archs {
+			m, err := readManifest(kind, arch)
+			if err != nil {
+				return err
+			}
+			changed := false
+			for name := range m.VMConfig.Dependencies {
+				if !dependencies[name] {
+					delete(m.VMConfig.Dependencies, name)
+					changed = true
+				}
+			}
+			kept := m.VMConfig.Images[:0]
+			for _, image := range m.VMConfig.Images {
+				if images[image.Image] {
+					kept = append(kept, image)
+				} else {
+					changed = true
+				}
+			}
+			m.VMConfig.Images = kept
+			if changed {
+				if err := writeManifest(kind, arch, m); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func processGroup(groupName string, group DownloadGroup) error {
 	// For GitHub-released groups the version is the same across archs. Fetch it
 	// before deciding whether the group is already complete so existing manifest
 	// entries can be refreshed when upstream publishes a newer release.
 	var sharedVersion string
-	if group.Repo != "" && group.Apt == nil {
+	if group.Version != "" {
+		sharedVersion = group.Version
+	} else if group.Repo != "" && group.Apt == nil {
 		v, err := fetchRepoVersion(groupName, group.Repo)
 		if err != nil {
 			return err
@@ -1263,7 +1312,7 @@ func processGroup(groupName string, group DownloadGroup) error {
 			version = v
 			fmt.Printf("[%s:%s] version=%s\n", arch, groupName, version)
 		default:
-			return fmt.Errorf("%s: no version source (need Repo or Apt)", groupName)
+			return fmt.Errorf("%s: no version source (need Version, Repo, or Apt)", groupName)
 		}
 
 		for _, file := range archMissing {
@@ -1337,6 +1386,18 @@ func processGroup(groupName string, group DownloadGroup) error {
 
 func run() error {
 	flag.Parse()
+	if err := validateDependencyGraph(); err != nil {
+		return err
+	}
+	if *dependenciesOnly {
+		if err := requireCommands("gpg"); err != nil {
+			return err
+		}
+		if err := verifyAptRequirements(); err != nil {
+			return err
+		}
+		return writeDependenciesDoc(*dependenciesDoc)
+	}
 
 	// Three external verifiers/tools are needed:
 	//   - gpg      : verifies apt InRelease signatures against trust/*.asc
@@ -1352,6 +1413,9 @@ func run() error {
 	if err := requireCommands("gpg", "cosign", "qemu-img"); err != nil {
 		return err
 	}
+	if err := verifyAptRequirements(); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(*manifestsDir, 0o755); err != nil {
 		return err
 	}
@@ -1363,6 +1427,9 @@ func run() error {
 				return err
 			}
 		}
+	}
+	if err := reconcileManifestScope(); err != nil {
+		return err
 	}
 
 	// Phase 2: OS image.
@@ -1399,6 +1466,9 @@ func run() error {
 		if err := processGroup(name, sources.Dependencies[name]); err != nil {
 			return err
 		}
+	}
+	if err := writeDependenciesDoc(*dependenciesDoc); err != nil {
+		return err
 	}
 
 	fmt.Println("Done.")

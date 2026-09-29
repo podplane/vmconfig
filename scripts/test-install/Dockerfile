@@ -13,7 +13,8 @@ FROM debian:13-slim
 
 # Two groups of packages installed here:
 #
-#   1. jq, ca-certificates — required by install.sh itself.
+#   1. ca-certificates, kmod — present in the Debian genericcloud image and
+#      required by install.sh.
 #
 #   2. libcurl4t64, libsasl2-2, libyaml-0-2 (transitive deps of fluent-bit)
 #      and libgssapi-krb5-2, libldap2 (transitive deps of libpq5).
@@ -24,7 +25,7 @@ FROM debian:13-slim
 #      configuration of the bundled debs.
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      jq ca-certificates \
+      ca-certificates kmod \
       libcurl4t64 libsasl2-2 libyaml-0-2 \
       libgssapi-krb5-2 libldap2 \
  && rm -rf /var/lib/apt/lists/*
