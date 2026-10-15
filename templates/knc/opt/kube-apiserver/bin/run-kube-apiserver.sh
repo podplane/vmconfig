@@ -208,6 +208,9 @@ args=(
   # is required for the stable PodCertificateRequest node trust boundary.
   '--enable-admission-plugins=NodeRestriction,NamespaceExists,OwnerReferencesPermissionEnforcement'
 
+  # Pod Security Admission defaults for namespaces without explicit labels.
+  '--admission-control-config-file=/opt/kube-apiserver/etc/admission-configuration.yaml'
+
   # Note: required for Cilium. Use Pod Security Admission to restrict.
   '--allow-privileged=true'
 )

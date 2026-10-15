@@ -106,10 +106,11 @@ ensure_login_user_and_groups() { # <username> <primary group> <extra groups>
 ensure_permissions() {
   local mode="$1" user="$2" group="$3" path="$4"
 
-  # Validate referenced user/group exist before chowning so typos in the
-  # spec fail loudly instead of silently chowning to a numeric id.
+  # Named users/groups must exist; numeric container GIDs need no host group.
   getent passwd "$user"  >/dev/null || fatal "user '$user' does not exist (path: $path)"
-  getent group  "$group" >/dev/null || fatal "group '$group' does not exist (path: $path)"
+  if [[ ! "$group" =~ ^[0-9]+$ ]]; then
+    getent group "$group" >/dev/null || fatal "group '$group' does not exist (path: $path)"
+  fi
 
   # Refuse to operate on symlinks - chmod/chown would silently follow them
   # and modify the target instead of the link itself.
@@ -249,6 +250,10 @@ fi
 if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
   ensure_permissions 0700 root                    root                    "/opt/podplane/tunnel"
   ensure_permissions 0700 root                    root                    "/opt/podplane/tunnel/generations"
+  # Envoy's SDS sidecar (GID 65532) mounts this directory read-only via hostPath,
+  # so it must exist before nstance-recv-watch.sh publishes the first node.pem.
+  ensure_permissions 0700 root                    root                    "/opt/podplane/secrets"
+  ensure_permissions 0750 root                    65532                   "/opt/podplane/secrets/ingress"
 fi
 if [ "$VMCONFIG_KIND" = nst ]; then
   ensure_permissions 0755 root                    root                    "/opt/nstance-server"

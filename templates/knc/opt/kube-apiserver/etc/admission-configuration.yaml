@@ -1,0 +1,23 @@
+# https://kubernetes.io/docs/tasks/configure-pod-container/enforce-standards-admission-controller/
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+  - name: PodSecurity
+    configuration:
+      apiVersion: pod-security.admission.config.k8s.io/v1
+      kind: PodSecurityConfiguration
+      # Applies to namespaces without pod-security.kubernetes.io labels. Platform
+      # namespaces set their own levels; cluster admins may label others.
+      defaults:
+        enforce: baseline
+        enforce-version: latest
+        audit: restricted
+        audit-version: latest
+        warn: restricted
+        warn-version: latest
+      exemptions:
+        usernames: []
+        runtimeClasses: []
+        # Kubelet runs the podplane-tunnel static Pod (hostNetwork, hostPath) either
+        # way; this lets its mirror Pod into the API for kubectl get/logs.
+        namespaces: [kube-system]
