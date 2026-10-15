@@ -13,7 +13,11 @@ source "${SCRIPT_DIR}/../helpers.sh"
 source "${PODPLANE_ROOT:-}/opt/podplane/etc/user-data.env"
 # shellcheck source=/dev/null
 source "${PODPLANE_ROOT:-}/opt/podplane/etc/detected.env"
+# shellcheck source=/dev/null
+source "${PODPLANE_ROOT:-}/opt/podplane/etc/mutable.env"
 
+NSTANCE_SERVER_ID="${NSTANCE_SERVER_ID:-${INSTANCE_PROVIDER_ID##*/}}"
+NSTANCE_SERVER_ADVERTISE_HOST="${NSTANCE_SERVER_ADVERTISE_HOST:-$INSTANCE_IPV4}"
 for name in NSTANCE_SERVER_ID NSTANCE_SERVER_SHARD NSTANCE_SERVER_STORAGE NSTANCE_SERVER_BUCKET NSTANCE_SERVER_ADVERTISE_HOST; do
   require_nonempty "$name"
 done

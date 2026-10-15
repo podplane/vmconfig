@@ -93,8 +93,13 @@ set_file_permissions 0600 root root "$tmp_detected"
 # write mutable.env file
 log "writing ${MUTABLE_ENV}..."
 cp "${PODPLANE_ROOT:-}$DEFAULT_MUTABLE_ENV" "${PODPLANE_ROOT:-}$tmp_mutable"
-[ -s "${PODPLANE_ROOT:-}$tmp_mutable" ] || fatal "failed to write non-empty ${MUTABLE_ENV}"
 set_file_permissions 0600 root root "$tmp_mutable"
+if [ "$VMCONFIG_KIND" = nst ] && [ -f "${PODPLANE_ROOT:-}$MUTABLE_ENV" ]; then
+  # NST receives its settings at provisioning, not through an agent,
+  # so technically mutable.env on nst instances is not mutable
+  cat "${PODPLANE_ROOT:-}$MUTABLE_ENV" >> "${PODPLANE_ROOT:-}$tmp_mutable"
+fi
+[ -s "${PODPLANE_ROOT:-}$tmp_mutable" ] || fatal "failed to write non-empty ${MUTABLE_ENV}"
 
 # finalise
 printf 'completed_at=%s\n' "$(date -u +%FT%TZ)" > "${PODPLANE_ROOT:-}$tmp_done"

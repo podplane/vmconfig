@@ -116,6 +116,7 @@ test: ## Run Go and host-side behavior tests
 	go test ./...
 	scripts/test-nstance-counters.sh
 	tests/nat-host.sh
+	tests/nst-host.sh
 
 test-integration: build-bpf ## Run privileged Linux networking and eBPF tests in Docker
 	tests/linux-integration.sh

@@ -41,6 +41,7 @@ The VM kind (`knd`, `knc`, `nst`, or `nat`) is read from `vmconfig.kind` in `/op
 `install.sh`, `configure.sh`, and `restart.sh` are designed to be idempotent. They handle checking all dependencies, installing them, configuring the system, and (re)starting services as needed.
 
 Runtime settings that can be updated after bootstrap are defined by the stable `/opt/podplane/share/defaults/mutable.env` contract.
+For `nst` instances it uses the same `mutable.env` file, but it is supplied at bootstrap and is immutable for that VM; change its settings by replacing the VM through its instance group.
 
 See [VM Configuration](https://podplane.dev/docs/reference/vm-configuration/) for bootstrap settings and tunnel configuration.
 
