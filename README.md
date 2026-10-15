@@ -46,6 +46,8 @@ See [VM Configuration](https://podplane.dev/docs/reference/vm-configuration/) fo
 
 ## Development
 
+Run `mise install` to install the pinned Clang and ShellCheck versions used by CI.
+
 On macOS, configuration tests need Bash 4+, GNU coreutils on `PATH`, and `flock`.
 
 All dev workflows are defined in the [Makefile](./Makefile) - run `make help` for the full list, but key workflows include:

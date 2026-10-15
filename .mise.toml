@@ -4,3 +4,4 @@
 
 [tools]
 clang = "19.1.7"
+shellcheck = "0.11.0"

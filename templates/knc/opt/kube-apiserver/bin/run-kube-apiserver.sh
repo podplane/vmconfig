@@ -208,7 +208,7 @@ args=(
   # is required for the stable PodCertificateRequest node trust boundary.
   '--enable-admission-plugins=NodeRestriction,NamespaceExists,OwnerReferencesPermissionEnforcement'
 
-  # Note: required for Cilium. Use Pod Security Policy to restrict.
+  # Note: required for Cilium. Use Pod Security Admission to restrict.
   '--allow-privileged=true'
 )
 

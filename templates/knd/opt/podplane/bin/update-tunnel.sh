@@ -37,7 +37,9 @@ mkdir -p "$snapshot_dir" "$staged_generation_dir/files"
 # Agent-owned paths are untrusted; never follow symlinks or source their content.
 copy_input() {
   local source_file=$1 destination_file=$2
-  [ -f "$source_file" ] && [ ! -L "$source_file" ] || fatal 'missing or unsafe tunnel input'
+  if [ ! -f "$source_file" ] || [ -L "$source_file" ]; then
+    fatal 'missing or unsafe tunnel input'
+  fi
   dd if="$source_file" of="$destination_file" iflag=nofollow,nonblock status=none
 }
 # Pin the source directory so replacement cannot redirect subsequent reads.

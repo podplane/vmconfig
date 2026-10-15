@@ -64,7 +64,7 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / { printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@printf "\nLogs:    %s/<target>.log (recreated each run)\n" "$(TEMP_DIR)"
 
-setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
+setup: ## Verify required tools and install git hooks
 	@command -v $(TAR) >/dev/null 2>&1 || { \
 	  echo "Error: '$(TAR)' not found in PATH"; \
 	  echo "  macOS:         brew install gnu-tar (provides 'gtar')"; \
@@ -81,12 +81,7 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 	  echo "  Debian/Ubuntu: 'apt install rsync'"; \
 	  exit 1; \
 	}
-	@command -v shellcheck >/dev/null 2>&1 || { \
-	  echo "Error: 'shellcheck' not found in PATH"; \
-	  echo "  macOS:         brew install shellcheck"; \
-	  echo "  Debian/Ubuntu: apt install shellcheck"; \
-	  exit 1; \
-	}
+	@$(MISE) exec -- shellcheck --version >/dev/null
 	@command -v jq >/dev/null 2>&1 || { \
 	  echo "Error: 'jq' not found in PATH"; \
 	  echo "  macOS:         brew install jq"; \
@@ -110,9 +105,9 @@ setup: ## Verify required tools (gtar, rsync, shellcheck) and install git hooks
 	  echo "Skipping git hook install (.git not found)."; \
 	fi
 
-lint: ## Run shellcheck on all shell scripts under templates/ and scripts/
+lint: ## Run pinned ShellCheck on shell scripts under templates/ and scripts/
 	@echo "Running shellcheck..."
-	@shellcheck $$(find templates scripts -type f \( -name '*.sh' -o -path 'scripts/git-hooks/*' \))
+	@$(MISE) exec -- shellcheck $$(find templates scripts -type f \( -name '*.sh' -o -path 'scripts/git-hooks/*' \))
 
 precommit: ## Run all pre-commit checks (lint)
 	@$(MAKE) lint
