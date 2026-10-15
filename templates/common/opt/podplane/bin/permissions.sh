@@ -246,15 +246,16 @@ if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
   ensure_permissions 0700 kube2iam                kube2iam                "/opt/kube2iam"
   ensure_permissions 0750 root                    kube2iam                "/opt/key/kube2iam"
 fi
-if [ "$VMCONFIG_KIND" = knc ] || [ "$VMCONFIG_KIND" = nst ]; then
+if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
   ensure_permissions 0700 root                    root                    "/opt/podplane/tunnel"
-  ensure_permissions 0700 root                    root                    "/opt/podplane/tunnel/files"
+  ensure_permissions 0700 root                    root                    "/opt/podplane/tunnel/generations"
 fi
 if [ "$VMCONFIG_KIND" = nst ]; then
   ensure_permissions 0755 root                    root                    "/opt/nstance-server"
   ensure_permissions 0555 root                    root                    "/opt/nstance-server/bin"
   ensure_permissions 0700 nstance-server          nstance-server          "/opt/nstance-server/cache"
   ensure_permissions 0755 root                    root                    "/run/nstance"
+  ensure_permissions 0700 root                    root                    "/run/nstance/tunnels"
   ensure_permissions 2770 root                    nstance-proxy           "/run/nstance/proxy"
   ensure_permissions 2770 root                    nstance-server          "/run/nstance/tunnel"
   ensure_permissions 0700 nstance-server          nstance-server          "/run/nstance/files"
@@ -282,6 +283,7 @@ ensure_executable "/opt/podplane/bin/bootstrap.sh"
 ensure_executable "/opt/podplane/bin/configure.sh"
 ensure_executable "/opt/podplane/bin/restart.sh"
 ensure_executable "/opt/podplane/bin/update-mutable-env.sh"
+ensure_executable "/opt/podplane/bin/update-tunnel.sh"
 ensure_executable "/opt/podplane/bin/nstance-recv-watch.sh"
 ensure_executable "/opt/podplane/lib/configure/hosts.sh"
 ensure_executable "/opt/podplane/lib/configure/nstance-agent.sh"
@@ -290,11 +292,13 @@ ensure_executable "/opt/podplane/lib/configure/containerd.sh"
 ensure_executable "/opt/podplane/lib/configure/registry.sh"
 ensure_executable "/opt/podplane/lib/configure/kube2iam.sh"
 ensure_executable "/opt/podplane/lib/configure/kube.sh"
+ensure_executable "/opt/podplane/lib/configure/tunnels.sh"
 ensure_executable "/opt/podplane/lib/configure/netsy.sh"
 ensure_executable "/opt/podplane/lib/configure/nstance-server.sh"
 ensure_executable "/opt/podplane/lib/configure/nat.sh"
 ensure_executable "/opt/podplane/lib/configure/nstance-counters.sh"
 ensure_executable "/opt/podplane/bin/nat-host.sh"
+ensure_executable "/opt/podplane/bin/nstance-tunnel-cleanup.sh"
 
 # nstance-agent
 ensure_executable "/opt/nstance-agent/bin/nstance-agent"

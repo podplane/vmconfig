@@ -42,6 +42,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | Dependency | Source | Requires |
 | --- | --- | --- |
 | `containerd` | [containerd/containerd](https://github.com/containerd/containerd) | `runc` |
+| `crictl` | [kubernetes-sigs/cri-tools](https://github.com/kubernetes-sigs/cri-tools) | — |
 | `fluent-bit` | [packages.fluentbit.io](https://packages.fluentbit.io/debian/trixie/dists/trixie) | `libpq5` |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
 | `nstance-server` | [nstance-dev/nstance](https://github.com/nstance-dev/nstance) | — |

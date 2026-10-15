@@ -57,6 +57,8 @@ var (
 	trustDir         = flag.String("trust-dir", "./trust", "Directory holding the committed signing keys (vmconfig/trust).")
 	cacheDir         = flag.String("cache-dir", "./cache", "Directory for cached large downloads.")
 	dependenciesDoc  = flag.String("dependencies-doc", "./docs/dependencies.md", "Generated dependency reference path.")
+	dependencyGroup  = flag.String("group", "", "Refresh only this dependency group, preserving OS, image, and other dependency pins.")
+	imagesOnly       = flag.Bool("images-only", false, "Resolve missing runtime images only, preserving OS and dependency pins without regenerating docs.")
 	dependenciesOnly = flag.Bool("dependencies-only", false,
 		"Validate dependency metadata and regenerate its reference without updating manifests.")
 )
@@ -782,6 +784,24 @@ func fetchFileHash(
 	if err != nil {
 		return "", err
 	}
+	if group.HashCosignBundle != nil {
+		// Verify the exact checksum bytes before using any entry. The archive
+		// is subsequently downloaded and checked against this signed digest.
+		tmpDir, err := os.MkdirTemp("", "vmconfig-checksums-")
+		if err != nil {
+			return "", err
+		}
+		defer os.RemoveAll(tmpDir)
+		checksumPath := filepath.Join(tmpDir, "checksums.txt")
+		if err := os.WriteFile(checksumPath, []byte(data), 0o600); err != nil {
+			return "", err
+		}
+		if err := cosignVerifyBlob(checksumPath, DownloadGroup{CosignBundle: group.HashCosignBundle}, cosignCtx{
+			arch: arch, version: version, file: file,
+		}); err != nil {
+			return "", err
+		}
+	}
 	// Multi-line sha256sum file: pick the line whose column-2 filename
 	// matches the rendered HashFilename template, then return its hash.
 	if group.HashFilename != "" {
@@ -1322,15 +1342,14 @@ func processGroup(groupName string, group DownloadGroup) error {
 				return err
 			}
 
-			// For cosign-protected groups, download the artifact bytes,
-			// confirm sha256 matches the sidecar, and run cosign verify-blob.
-			// cosign signs the artifact contents, not the sidecar, so the
-			// bytes have to flow through this process at least once.
+			// Signed archives and signed checksum files both require hashing
+			// the downloaded artifact. HashCosignBundle was verified above;
+			// the other layouts verify a signature over the artifact itself.
 			// We verify ONCE per (arch, file) and broadcast the resolved
 			// entry to every kind that needs it; the artifact itself is
 			// kind-independent.
 			var size int64
-			if group.CosignSigCert != nil || group.CosignBundle != nil {
+			if group.CosignSigCert != nil || group.CosignBundle != nil || group.HashCosignBundle != nil {
 				fmt.Printf("[%s]   fetching %s for verification...\n", arch, file.Name)
 				var artifactPath string
 				artifactPath, size, err = cachedDownload(
@@ -1343,11 +1362,13 @@ func processGroup(groupName string, group DownloadGroup) error {
 				if err != nil {
 					return err
 				}
-				fmt.Printf("[%s]   verifying cosign signature for %s...\n", arch, file.Name)
-				if err := cosignVerifyBlob(artifactPath, group, cosignCtx{
-					arch: arch, version: version, file: file.Name,
-				}); err != nil {
-					return err
+				if group.CosignSigCert != nil || group.CosignBundle != nil {
+					fmt.Printf("[%s]   verifying cosign signature for %s...\n", arch, file.Name)
+					if err := cosignVerifyBlob(artifactPath, group, cosignCtx{
+						arch: arch, version: version, file: file.Name,
+					}); err != nil {
+						return err
+					}
 				}
 			} else {
 				size, err = remoteFileSize(url)
@@ -1386,6 +1407,17 @@ func processGroup(groupName string, group DownloadGroup) error {
 
 func run() error {
 	flag.Parse()
+	if *imagesOnly {
+		if *dependenciesOnly || *dependencyGroup != "" {
+			return fmt.Errorf("--images-only cannot be combined with --dependencies-only or --group")
+		}
+		if err := requireCommands("crane"); err != nil {
+			return err
+		}
+		// Require existing manifests: do not bootstrap, reconcile dependency
+		// scope, inspect OS images, or regenerate dependency documentation.
+		return processImages()
+	}
 	if err := validateDependencyGraph(); err != nil {
 		return err
 	}
@@ -1394,6 +1426,16 @@ func run() error {
 			return err
 		}
 		if err := verifyAptRequirements(); err != nil {
+			return err
+		}
+		return writeDependenciesDoc(*dependenciesDoc)
+	}
+	if *dependencyGroup != "" {
+		group, ok := sources.Dependencies[*dependencyGroup]
+		if !ok {
+			return fmt.Errorf("unknown dependency group %q", *dependencyGroup)
+		}
+		if err := processGroup(*dependencyGroup, group); err != nil {
 			return err
 		}
 		return writeDependenciesDoc(*dependenciesDoc)

@@ -71,6 +71,9 @@ done
 
 # The agent can traverse only this namespace and open only the counter map.
 # It cannot mutate the loader's port allowlist or replace pinned programs/links.
+# Debian mounts bpffs with mode 1700. Allow traversal of the mount without
+# listing it; the namespace and individual pins below still restrict access.
+chmod o+x "${BPF_FS}"
 chown -R root:root "${BPF_FS}/nstance"
 chmod 0710 "${BPF_FS}/nstance" "${PIN_DIR}" "${PIN_DIR}/links" "${PIN_DIR}/maps"
 chgrp nstance-agent "${BPF_FS}/nstance" "${PIN_DIR}" "${PIN_DIR}/links" "${PIN_DIR}/maps"

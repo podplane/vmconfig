@@ -132,6 +132,7 @@ case "$VMCONFIG_KIND" in
     fi
     "${CONFIGURE_COMPONENT_DIR}/kube2iam.sh"
     "${CONFIGURE_COMPONENT_DIR}/kube.sh"
+    "${CONFIGURE_COMPONENT_DIR}/tunnels.sh"
     if nstance_counters_enabled; then
       "${CONFIGURE_COMPONENT_DIR}/nstance-counters.sh"
     else

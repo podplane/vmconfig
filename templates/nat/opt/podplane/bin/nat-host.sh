@@ -111,13 +111,14 @@ check_jool_runtime() {
 }
 
 # deactivate removes forwarding state and disables packet forwarding.
+# it stops translation before removing its source/destination guard.
 deactivate() {
+  if command -v jool >/dev/null && jool -i "$JOOL_INSTANCE" global display >/dev/null 2>&1; then
+    jool instance remove "$JOOL_INSTANCE"
+  fi
   nft delete table ip6 podplane_nat64_guard 2>/dev/null || true
   nft delete table ip podplane_nat_snat 2>/dev/null || true
   nft delete table inet podplane_nat_filter 2>/dev/null || true
-  if command -v jool >/dev/null && jool instance display "$JOOL_INSTANCE" >/dev/null 2>&1; then
-    jool instance remove "$JOOL_INSTANCE"
-  fi
   set_sysctl net.ipv4.ip_forward 0
   set_sysctl net.ipv6.conf.all.forwarding 0
 }

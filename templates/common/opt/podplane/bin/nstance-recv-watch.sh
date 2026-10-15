@@ -38,6 +38,7 @@ if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
   ALLOWED_RECEIVED_FILES[kube2iam.client.crt]=1
   ALLOWED_RECEIVED_FILES[kubelet.client.crt]=1
   ALLOWED_RECEIVED_FILES[kubelet.server.crt]=1
+  ALLOWED_RECEIVED_FILES[ingress.server.crt]=1
 fi
 if [ "$VMCONFIG_KIND" = knc ]; then
   ALLOWED_RECEIVED_FILES[kube-controller-manager.client.crt]=1
@@ -53,6 +54,41 @@ copy_received_file() {
     fatal "refusing unsafe received file: $source"
   fi
   chmod 0600 "$destination"
+}
+
+# publish_ingress_bundle keeps the SDS directory inode stable for a read-only
+# directory mount. Only the combined PEM is exposed, never nstance-agent owned paths.
+publish_ingress_bundle() {
+  local cert="$NSTANCE_RECV/ingress.server.crt"
+  local key="$NSTANCE_BASE/keys/ingress.server.key"
+  local destination=/opt/podplane/secrets/ingress
+  local cert_public key_public bundle_dir
+  [ -f "$cert" ] && [ -f "$key" ] || return 0
+
+  copy_received_file "$cert" "$WORK_DIR/ingress.server.crt"
+  copy_received_file "$key" "$WORK_DIR/ingress.server.key"
+  if ! cert_public=$(openssl x509 -in "$WORK_DIR/ingress.server.crt" -pubkey -noout) ||
+     ! key_public=$(openssl pkey -in "$WORK_DIR/ingress.server.key" -passin pass: -pubout) ||
+     [ "$cert_public" != "$key_public" ]; then
+    echo 'Skipping ingress bundle: invalid or mismatched certificate/key.' >&2
+    return 0
+  fi
+
+  if [ -L /opt/podplane/secrets ] || [ -L "$destination" ]; then
+    fatal 'refusing symlink ingress secret directory'
+  fi
+  install -d -m 0700 -o root -g root /opt/podplane/secrets
+  install -d -m 0750 -o root -g 65532 "$destination"
+  # Build on the destination filesystem and set permissions before rename.
+  bundle_dir=$(mktemp -d "$destination/.node.XXXXXX")
+  if ! { cat "$WORK_DIR/ingress.server.crt"; printf '\n'; cat "$WORK_DIR/ingress.server.key"; } >"$bundle_dir/node.pem" ||
+     ! chmod 0640 "$bundle_dir/node.pem" ||
+     ! chown root:65532 "$bundle_dir/node.pem" ||
+     ! mv -fT "$bundle_dir/node.pem" "$destination/node.pem"; then
+    rm -rf "$bundle_dir"
+    fatal 'failed to publish ingress bundle'
+  fi
+  rmdir "$bundle_dir"
 }
 
 # Remove the trigger file to allow systemd to queue future triggers
@@ -100,6 +136,12 @@ if [ -f "${NSTANCE_RECV}/mutable.env" ]; then
   fi
 fi
 
+# Ingress has its own delivery contract; do not copy its certificate or private
+# key through the generic /opt/crt and /opt/key/<service> paths below.
+if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
+  publish_ingress_bundle
+fi
+
 # Iterate over certificate and key files from nstance receive dir
 for file in "${NSTANCE_RECV}"/*.{crt,pub,key}; do
   if [ ! -f "${file}" ]; then
@@ -109,6 +151,7 @@ for file in "${NSTANCE_RECV}"/*.{crt,pub,key}; do
   fi
 
   DEST_FILE=$(basename "${file}")
+  [ "$DEST_FILE" != ingress.server.crt ] || continue
   if [ -z "${ALLOWED_RECEIVED_FILES[$DEST_FILE]+x}" ]; then
     echo "Skipping ${DEST_FILE}: not allowed for this vmconfig kind."
     continue
@@ -157,6 +200,7 @@ for file in "${NSTANCE_BASE}"/keys/*.key; do
   [ -f "$file" ] || continue
 
   KEY_FILE=$(basename "$file")
+  [ "$KEY_FILE" != ingress.server.key ] || continue
   CERT_FILE="${KEY_FILE%.key}.crt"
   if [ -z "${ALLOWED_RECEIVED_FILES[$CERT_FILE]+x}" ] || [ ! -f "/opt/crt/${CERT_FILE}" ]; then
     continue
@@ -182,6 +226,9 @@ done
 # script and then restart services.
 if [ ! -f "${LAST_WRITE_FILES_FILE}" ]; then
   if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
+    if [ -e "$NSTANCE_RECV/tunnel.env" ] || [ -L "$NSTANCE_RECV/tunnel.env" ]; then
+      /opt/podplane/bin/update-tunnel.sh "$NSTANCE_RECV"
+    fi
     containerd_config_hash="$(sha256sum /etc/containerd/config.toml | awk '{print $1}')"
   fi
   echo "Running configure.sh..."

@@ -34,6 +34,13 @@
         "digest": "sha256:d65eda6a188aac1006848d8060099be88ba9c4bcddbfd9a23a961194710d0dd4",
         "size": 35866168
       },
+      "crictl": {
+        "version": "1.37.0",
+        "url": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.37.0/crictl-v1.37.0-linux-amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha256:67c983ee8a6bbce73d39a186e633c5fe4f8a70e62171ac3bd92a9c1b2c601670",
+        "size": 19539425
+      },
       "fluent-bit": {
         "version": "5.1.2",
         "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.1.2_amd64.deb",
@@ -63,11 +70,11 @@
         "size": 222488
       },
       "nstance-server": {
-        "version": "1.3.4",
-        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.3.4/nstance-server_1.3.4_linux_amd64.tar.gz",
+        "version": "2.1.2",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.1.2/nstance-server_2.1.2_linux_amd64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:fc2dd90d35a81328e7147d5ba44d5797c522300bde03977cdba511e283ed5810bdffd1d9370763e9b7380a11fd0b341a10f99dd7d82b7cb979127f3d42a5415b",
-        "size": 24392760
+        "digest": "sha512:c578fed091c3253d12e9e998d9b9ac861b39545ab1418c4d5aa0fbfb1f5827500f1d42cfd97f39c8e89a49518466efedce6ada48fedc2023f515d46fe43a86c8",
+        "size": 32146277
       },
       "registry": {
         "version": "0.1.0",
@@ -99,6 +106,13 @@
       }
     },
     "images": [
+      {
+        "image": "cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07",
+        "digest": "sha256:1a50cc8893b3f0dd283805d2efcd3336210aced60a83d967fb2bbc8ab69b5f35",
+        "size": 28968887,
+        "platform": "linux/amd64",
+        "index": "sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07"
+      },
       {
         "image": "registry.k8s.io/pause:3.10.2",
         "digest": "sha256:412c4a7219cb8a299a37337f3d87810c5340095322e15594a1637785adad0f17",

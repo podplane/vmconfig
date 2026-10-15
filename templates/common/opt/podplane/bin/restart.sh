@@ -73,18 +73,18 @@ case "$VMCONFIG_KIND" in
     enable_units+=(nstance-server.service)
     restart_units+=(nstance-server.service)
     case "${NSTANCE_SLEEP_ENABLED:-}" in
-      true) enable_units+=(nstance-server-proxy.service); restart_units+=(nstance-server-proxy.service) ;;
-      false) disable_units+=(nstance-server-proxy.service); stop_units+=(nstance-server-proxy.service) ;;
+      true) enable_units+=(nstance-proxy.service); restart_units+=(nstance-proxy.service) ;;
+      false) disable_units+=(nstance-proxy.service); stop_units+=(nstance-proxy.service) ;;
       *) fatal "NSTANCE_SLEEP_ENABLED must be true or false" ;;
     esac
     case "${NSTANCE_TUNNEL_ENABLED:-}" in
       true)
-        enable_units+=(containerd kubelet nstance-server-tunnel.service)
-        restart_units+=(containerd kubelet nstance-server-tunnel.service)
+        enable_units+=(containerd kubelet nstance-tunnel.service)
+        restart_units+=(containerd kubelet nstance-tunnel.service)
         ;;
       false)
-        disable_units+=(nstance-server-tunnel.service kubelet containerd)
-        stop_units+=(nstance-server-tunnel.service kubelet containerd)
+        disable_units+=(nstance-tunnel.service kubelet containerd)
+        stop_units+=(nstance-tunnel.service kubelet containerd)
         ;;
       *) fatal "NSTANCE_TUNNEL_ENABLED must be true or false" ;;
     esac

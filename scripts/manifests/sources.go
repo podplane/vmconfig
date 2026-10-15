@@ -27,7 +27,8 @@
 //     we add the maintainer keys to vmconfig/trust/.
 //   - registry: SHA-512 release checksums sidecar. The checksum file has a
 //     cosign bundle, but the archives do not have per-artifact signatures.
-//   - netsy, nstance-agent: release checksum sidecars.
+//   - nstance: signed SHA-512 release checksums (GitHub Actions OIDC).
+//   - netsy: release checksum sidecars.
 //   - cri-tools, cni-plugins, kube2iam: no consistent upstream signature scheme.
 //     TLS-only where release artifacts are available.
 //   - debian cloud image: no detached signature published by Debian Cloud Team.
@@ -148,7 +149,7 @@ var sources = Sources{
 			HashURL: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$VERSION/$FILE-v$VERSION-linux-$ARCH.tar.gz.sha256",
 			HashAlg: "sha256",
 			Type:    DepTypeTarGz,
-			Files:   []FileEntry{{Name: "crictl", Kind: kubernetesNodeKinds}},
+			Files:   []FileEntry{{Name: "crictl", Kind: containerRuntimeKinds}},
 		},
 		"cni-plugins": {
 			Repo:    "containernetworking/plugins",
@@ -234,6 +235,11 @@ var sources = Sources{
 			HashFilename: "$FILE_$VERSION_linux_$ARCH.tar.gz",
 			HashAlg:      "sha512",
 			Type:         DepTypeTarGz,
+			HashCosignBundle: &CosignBundle{
+				BundleURL:     "https://github.com/nstance-dev/nstance/releases/download/v$VERSION/nstance_$VERSION_checksums.txt.bundle",
+				ExpectIssuer:  "https://token.actions.githubusercontent.com",
+				ExpectSubject: "https://github.com/nstance-dev/nstance/.github/workflows/release.yml@refs/tags/v$VERSION",
+			},
 			Files: []FileEntry{
 				{Name: "nstance-agent", Kind: nstanceAgentKinds},
 				{Name: "nstance-server", Kind: []string{KindNst}},
@@ -265,6 +271,7 @@ var sources = Sources{
 		},
 	},
 	Images: []ImageSource{
+		{Name: "cloudflared", Image: "cloudflare/cloudflared:2026.10.0@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07"},
 		// note: the pause image may change with each containerd version
 		// e.g. https://github.com/containerd/containerd/blob/v2.3.1/internal/cri/config/config.go#L76
 		{Name: "pod-sandbox", Image: "registry.k8s.io/pause:3.10.2"},

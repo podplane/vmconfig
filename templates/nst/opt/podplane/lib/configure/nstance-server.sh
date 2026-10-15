@@ -62,7 +62,7 @@ NSTANCE_TUNNEL_SHARD=$(quote_env_value "${NSTANCE_TUNNEL_SHARD:-}")
 NSTANCE_TUNNEL_PREFIX=$(quote_env_value "${NSTANCE_TUNNEL_PREFIX:-}")
 NSTANCE_TUNNEL_SOCKET='/run/nstance/tunnel/nstance-tunnel.sock'
 NSTANCE_TUNNEL_MANIFEST_DIR='/etc/kubernetes/manifests'
-NSTANCE_TUNNEL_FILES_DIR='/opt/podplane/tunnel/files'
+NSTANCE_TUNNEL_FILES_DIR='/run/nstance/tunnels'
 EOF
 set_file_permissions 0600 root root "$tmp"
 mv "${PODPLANE_ROOT:-}$tmp" "${PODPLANE_ROOT:-}/opt/env/nstance-server-tunnel.env"

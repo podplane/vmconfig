@@ -133,7 +133,12 @@ dependencies: ## Validate dependency edges and regenerate docs/dependencies.md
 update-manifests: ## Refresh manifests/<kind>.<os>.<arch>.json (verified via gpg + cosign)
 	@mkdir -p $(TEMP_DIR)
 	@rm -f $(TEMP_DIR)/update-manifests.log
-	go run ./scripts/manifests --manifests-dir=./manifests --trust-dir=./trust 2>&1 | tee $(TEMP_DIR)/update-manifests.log
+	go run ./scripts/manifests --manifests-dir=./manifests --trust-dir=./trust $(if $(GROUP),--group=$(GROUP)) 2>&1 | tee $(TEMP_DIR)/update-manifests.log
+
+update-images: ## Resolve missing runtime images only; preserve OS and dependency pins
+	@mkdir -p $(TEMP_DIR)
+	@rm -f $(TEMP_DIR)/update-images.log
+	go run ./scripts/manifests --manifests-dir=./manifests --images-only 2>&1 | tee $(TEMP_DIR)/update-images.log
 
 update-trust: ## Refresh vmconfig/trust/*.asc keyring files
 	@mkdir -p $(TEMP_DIR)

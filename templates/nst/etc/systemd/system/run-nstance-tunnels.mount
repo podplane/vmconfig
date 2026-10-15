@@ -1,0 +1,9 @@
+[Unit]
+Description=Memory-only Nstance tunnel files
+StopWhenUnneeded=yes
+
+[Mount]
+What=tmpfs
+Where=/run/nstance/tunnels
+Type=tmpfs
+Options=mode=0700,uid=0,gid=0,size=16M,noswap,nodev,nosuid,noexec

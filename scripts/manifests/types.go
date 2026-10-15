@@ -131,7 +131,9 @@ type DownloadGroup struct {
 	// Optional cosign keyless verification. Set at most one of these two.
 	CosignSigCert *CosignSigCert
 	CosignBundle  *CosignBundle
-	Files         []FileEntry
+	// Optional signature over HashURL's checksum file, rather than the archive.
+	HashCosignBundle *CosignBundle
+	Files            []FileEntry
 }
 
 // OsSource describes the OS image source. main.go uses this to compute the

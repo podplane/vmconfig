@@ -1,7 +1,9 @@
 [Unit]
 Description=Standalone kubelet for Nstance tunnel static Pods
-After=containerd.service
+After=containerd.service nstance-tunnel.service
 Requires=containerd.service
+BindsTo=nstance-tunnel.service
+PartOf=nstance-tunnel.service
 
 [Service]
 Type=exec

@@ -5,7 +5,10 @@
 package main
 
 import (
+	"bytes"
 	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -109,5 +112,77 @@ func TestRenderDependenciesDoc(t *testing.T) {
 	}
 	if first != string(committed) {
 		t.Fatal("docs/dependencies.md is stale; run make dependencies")
+	}
+}
+
+// TestImagesOnlyScope exercises the updater entry point without any upstream
+// network access, proving unrelated pins and NAT manifests are preserved.
+func TestImagesOnlyScope(t *testing.T) {
+	originalSources := sources
+	originalDir, originalDoc := *manifestsDir, *dependenciesDoc
+	originalImages, originalDeps, originalGroup := *imagesOnly, *dependenciesOnly, *dependencyGroup
+	t.Cleanup(func() {
+		sources = originalSources
+		*manifestsDir, *dependenciesDoc = originalDir, originalDoc
+		*imagesOnly, *dependenciesOnly, *dependencyGroup = originalImages, originalDeps, originalGroup
+	})
+	*manifestsDir = t.TempDir()
+	*dependenciesDoc = filepath.Join(*manifestsDir, "dependencies.md")
+	*imagesOnly, *dependenciesOnly, *dependencyGroup = true, false, ""
+	sources.Images = []ImageSource{{Name: "test", Image: "example/test@sha256:test"}}
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "crane"), []byte("#!/bin/sh\nprintf '%s' '{\"config\":{\"size\":10},\"layers\":[{\"size\":20}]}'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	before := map[string][]byte{}
+	for _, kind := range allKinds {
+		for _, arch := range Archs {
+			m := &Manifest{VMConfig: ManifestVMConfig{
+				Version: "keep", Kind: kind,
+				OS:           ManifestOS{Name: sources.OS.Name, Arch: arch, Image: &OsImage{Version: "keep", Digest: "sha512:keep", Size: 123}},
+				Dependencies: map[string]*DependencyOutput{"user-dependency": {Version: "keep", Size: 456}},
+				Images:       []ImageOutput{{Image: "example/keep:1", Digest: "sha256:keep", Size: 789}},
+			}}
+			if err := writeManifest(kind, arch, m); err != nil {
+				t.Fatal(err)
+			}
+			body, err := os.ReadFile(manifestPath(kind, arch))
+			if err != nil {
+				t.Fatal(err)
+			}
+			before[manifestPath(kind, arch)] = body
+		}
+	}
+	if err := run(); err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range allKinds {
+		for _, arch := range Archs {
+			m, err := readManifest(kind, arch)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if kind != KindNat {
+				if len(m.VMConfig.Images) != 2 || m.VMConfig.Images[1].Image != sources.Images[0].Image || m.VMConfig.Images[1].Size <= 30 {
+					t.Fatalf("%s/%s: missing resolved image: %+v", kind, arch, m.VMConfig.Images)
+				}
+				// Remove only the new entry; everything else must round-trip unchanged.
+				m.VMConfig.Images = m.VMConfig.Images[:1]
+				if err := writeManifest(kind, arch, m); err != nil {
+					t.Fatal(err)
+				}
+			}
+			body, err := os.ReadFile(manifestPath(kind, arch))
+			if err != nil || !bytes.Equal(body, before[manifestPath(kind, arch)]) {
+				t.Fatalf("%s/%s: changed unrelated inventory (read error: %v)", kind, arch, err)
+			}
+		}
+	}
+	if _, err := os.Stat(*dependenciesDoc); !os.IsNotExist(err) {
+		t.Fatalf("images-only wrote dependency documentation: %v", err)
+	}
+	if !reflect.DeepEqual(sources.Dependencies, originalSources.Dependencies) {
+		t.Fatal("images-only changed the dependency catalogue")
 	}
 }

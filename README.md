@@ -26,13 +26,13 @@ VMs are responsible for:
   3. Invoking `/opt/podplane/bin/install.sh` (verifies + installs artifacts, can be used for preparing machine images)
   4. (Optional) Writing any vmconfig runtime settings/environment variables to `/opt/podplane/etc/user-data.env`
   5. (Optional) Writing any sensitive bootstrap files required by individual services (e.g. `/opt/nstance-agent/identity/nonce.jwt`)
-  6. (Optional, `knc`) Writing VM-lifecycle-owned production tunnel static Pod manifests under `/etc/kubernetes/manifests` and root-only mounted files under `/opt/podplane/tunnel/files`
+  6. (Optional, `knd`/`knc`) Supplying tunnel settings via nstance-agent
   7. Invoking `/opt/podplane/bin/configure.sh` (idempotent per-boot configuration)
   8. Invoking `/opt/podplane/bin/restart.sh` (idempotent per-boot service (re)start)
 
 Note that the outcome of 1, 2, & 3 can be bundled into a machine image (e.g. an AMI on AWS).
 
-Kubelet watches `/etc/kubernetes/manifests` for static Pods on `knd`, `knc`, and `nst` VMs. On `nst`, the Nstance tunnel command constructs fixed hardened manifests from configured digest-pinned images, arguments, and protected file mounts. Deployment configuration owns production tunnel manifests on `knc` VMs.
+Kubelet runs tunnel static Pods: vmconfig configures one tunnel on `knd`/`knc` from Nstance-delivered files; the Nstance tunnel supervisor manages wake tunnels on `nst`.
 
 The VM kind (`knd`, `knc`, `nst`, or `nat`) is read from `vmconfig.kind` in `/opt/podplane/share/vmconfig-manifest.json` (and after install, from `/opt/podplane/share/vmconfig-installed.json`). Kubernetes node manifests always include the active connection counters; configuration enables them only when `NSTANCE_EBPF_PORTS` contains production listener ports.
 
@@ -42,7 +42,11 @@ The VM kind (`knd`, `knc`, `nst`, or `nat`) is read from `vmconfig.kind` in `/op
 
 Runtime settings that can be updated after bootstrap are defined by the stable `/opt/podplane/share/defaults/mutable.env` contract.
 
+See [VM Configuration](https://podplane.dev/docs/reference/vm-configuration/) for bootstrap settings and tunnel configuration.
+
 ## Development
+
+On macOS, configuration tests need Bash 4+, GNU coreutils on `PATH`, and `flock`.
 
 All dev workflows are defined in the [Makefile](./Makefile) - run `make help` for the full list, but key workflows include:
 
@@ -82,6 +86,12 @@ Per-source verification chain used by `update-manifests`:
 
 - __containerd tarballs__:
     `.sha256sum` sidecar and the release-wide sigstore bundle `*-attestation.intoto.jsonl` (GitHub Actions OIDC)
+
+- __Nstance tarballs__:
+    cosign verifies the tagged release workflow's SHA-512 checksums -> downloaded archive digest.
+
+- __Container images__:
+    Registry content digests; publisher signatures are not verified.
 
 - __runc, registry, cri-tools, cni-plugins, Debian OS image__:
     TLS + sidecar checksum only - their available signing layouts are not currently verified by the manifest updater

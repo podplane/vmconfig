@@ -81,11 +81,14 @@ if [ "$kind" = knd ] || [ "$kind" = knc ] || [ "$kind" = nst ]; then
   [ "$(stat -c '%a:%U:%G' /etc/kubernetes/manifests)" = 700:root:root ] || fatal "invalid static Pod manifest directory permissions"
   grep -Fxq 'staticPodPath: /etc/kubernetes/manifests' /opt/kubelet/etc/kubelet.yaml || fatal "generic kubelet static Pod path is not configured"
 fi
-if [ "$kind" = knc ] || [ "$kind" = nst ]; then
+if [ "$kind" = knd ] || [ "$kind" = knc ]; then
   log "checking tunnel file storage"
-  for path in /opt/podplane/tunnel /opt/podplane/tunnel/files; do
+  for path in /opt/podplane/tunnel /opt/podplane/tunnel/generations; do
     [ "$(stat -c '%a:%U:%G' "$path")" = 700:root:root ] || fatal "invalid tunnel path permissions: $path"
   done
+fi
+if [ "$kind" = nst ]; then
+  [ "$(stat -c '%a:%U:%G' /run/nstance/tunnels)" = 700:root:root ] || fatal "invalid tunnel path permissions"
 fi
 if [ "$kind" = nat ]; then
   log "checking container runtime absence"

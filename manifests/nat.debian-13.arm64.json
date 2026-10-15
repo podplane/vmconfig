@@ -119,11 +119,11 @@
         "size": 75728
       },
       "nstance-agent": {
-        "version": "1.3.4",
-        "url": "https://github.com/nstance-dev/nstance/releases/download/v1.3.4/nstance-agent_1.3.4_linux_arm64.tar.gz",
+        "version": "2.1.2",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.1.2/nstance-agent_2.1.2_linux_arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:074ac0c7a6ebb73b48bf779f3805c119162fefb97cc0484aa7e06e22b7f6f8e2a16f02cc45845fc8a1156cdeba0be96327bdcf0dac1fe8c23896b771f6cbba96",
-        "size": 5414518
+        "digest": "sha512:49c9a50ed450f0931934bd56ce322420cd350740ad2f8ad2c91b7d5b63a79074d68a2f426c8c11937adb4ba5dbe7dba5bdf6c27a432750f1a72bddc3e211a78f",
+        "size": 5538539
       },
       "vmconfig": {
         "version": "dev",

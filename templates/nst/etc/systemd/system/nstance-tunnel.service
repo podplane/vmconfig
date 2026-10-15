@@ -1,14 +1,16 @@
 [Unit]
 Description=Nstance tunnel supervisor
-After=network-online.target nstance-server.service containerd.service kubelet.service
-Wants=network-online.target nstance-server.service
-Requires=containerd.service kubelet.service
+After=network-online.target nstance-server.service containerd.service run-nstance-tunnels.mount
+Wants=network-online.target nstance-server.service kubelet.service
+Requires=containerd.service
+BindsTo=run-nstance-tunnels.mount
 
 [Service]
 Type=exec
 User=root
 Group=root
 EnvironmentFile=/opt/env/nstance-server-tunnel.env
+ExecStartPre=/opt/podplane/bin/nstance-tunnel-cleanup.sh
 ExecStart=/opt/nstance-server/bin/nstance-server tunnel \
     --storage=${NSTANCE_TUNNEL_STORAGE} \
     --bucket=${NSTANCE_TUNNEL_BUCKET} \
@@ -16,7 +18,9 @@ ExecStart=/opt/nstance-server/bin/nstance-server tunnel \
     --prefix=${NSTANCE_TUNNEL_PREFIX} \
     --server-socket=${NSTANCE_TUNNEL_SOCKET} \
     --manifest-dir=${NSTANCE_TUNNEL_MANIFEST_DIR} \
-    --files-dir=${NSTANCE_TUNNEL_FILES_DIR}
+    --files-dir=${NSTANCE_TUNNEL_FILES_DIR} \
+    --files-mode=0644
+ExecStopPost=/opt/podplane/bin/nstance-tunnel-cleanup.sh
 Restart=always
 RestartSec=5s
 UMask=0077
@@ -32,7 +36,7 @@ ProtectKernelLogs=yes
 ProtectKernelModules=yes
 ProtectKernelTunables=yes
 ProtectSystem=strict
-ReadWritePaths=/etc/kubernetes/manifests /opt/podplane/tunnel/files /run/nstance/tunnel
+ReadWritePaths=/etc/kubernetes/manifests /run/nstance/tunnels /run/nstance/tunnel
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 RestrictNamespaces=yes
 RestrictRealtime=yes
