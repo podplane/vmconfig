@@ -13,7 +13,9 @@ plugins:
         enforce-version: latest
         audit: restricted
         audit-version: latest
-        warn: restricted
+        # Warn when applying workloads whose Pods enforce will reject. Not
+        # restricted: Pod templates do not get platform-rbac's secure defaults.
+        warn: baseline
         warn-version: latest
       exemptions:
         usernames: []
