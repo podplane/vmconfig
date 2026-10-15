@@ -10,5 +10,28 @@ RestartSec=5
 User=nstance-agent
 Group=nstance-agent
 ExecStart=/opt/nstance-agent/bin/run-nstance-agent.sh
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/nstance-agent/identity /opt/nstance-agent/keys /opt/nstance-agent/recv
+# AF_NETLINK is required to enumerate local interface addresses.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_NETLINK AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+# bpf reads the pinned active-connection counters on knd/knc.
+SystemCallFilter=@system-service bpf
 [Install]
 WantedBy=multi-user.target
