@@ -42,6 +42,10 @@ jq -r --arg manifest_sha256 "$manifest_sha256" '
     ($vm.dependencies | to_entries[] | select(.value.type == "tar.gz") | "  \(.key | shell_quote)"),
     ")",
     "",
+    "VMCONFIG_DEPENDENCIES_TAR_BZ2=(",
+    ($vm.dependencies | to_entries[] | select(.value.type == "tar.bz2") | "  \(.key | shell_quote)"),
+    ")",
+    "",
     "VMCONFIG_DEPENDENCIES_BINARY=(",
     ($vm.dependencies | to_entries[] | select(.value.type == "binary") | "  \(.key | shell_quote)"),
     ")"

@@ -1,0 +1,12 @@
+# gVisor runtime handler for the gvisor RuntimeClass. runc remains containerd's
+# default, so static Pods and Pods without a RuntimeClass still use runc.
+version = 3
+[plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runsc]
+  runtime_type = "io.containerd.runsc.v1"
+  # Pass gVisor mount hints from Pod annotations to runsc. Containers sharing a
+  # Unix socket through an emptyDir need them, because gVisor otherwise gives
+  # each container a separate view of the volume.
+  pod_annotations = ["dev.gvisor.spec.mount.*"]
+  [plugins."io.containerd.cri.v1.runtime".containerd.runtimes.runsc.options]
+    TypeUrl = "io.containerd.runsc.v1.options"
+    ConfigPath = "/etc/containerd/runsc.toml"

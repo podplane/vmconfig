@@ -13,6 +13,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `containerd` | [containerd/containerd](https://github.com/containerd/containerd) | `runc` |
 | `crictl` | [kubernetes-sigs/cri-tools](https://github.com/kubernetes-sigs/cri-tools) | — |
 | `fluent-bit` | [packages.fluentbit.io](https://packages.fluentbit.io/debian/trixie/dists/trixie) | `libpq5` |
+| `gvisor` | [google/gvisor](https://github.com/google/gvisor) | `containerd`, `runc` |
 | `kube-apiserver` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kube-controller-manager` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kube-scheduler` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
@@ -32,6 +33,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `containerd` | [containerd/containerd](https://github.com/containerd/containerd) | `runc` |
 | `crictl` | [kubernetes-sigs/cri-tools](https://github.com/kubernetes-sigs/cri-tools) | — |
 | `fluent-bit` | [packages.fluentbit.io](https://packages.fluentbit.io/debian/trixie/dists/trixie) | `libpq5` |
+| `gvisor` | [google/gvisor](https://github.com/google/gvisor) | `containerd`, `runc` |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
 | `nstance-agent` | [nstance-dev/nstance](https://github.com/nstance-dev/nstance) | — |
 | `registry` | [podplane/registry](https://github.com/podplane/registry) | — |

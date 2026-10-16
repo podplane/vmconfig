@@ -1,0 +1,7 @@
+# gVisor containerd shim configuration for the runsc runtime handler.
+# https://gvisor.dev/docs/user_guide/containerd/configuration/
+binary_name = "/usr/local/bin/runsc"
+
+[runsc_config]
+  # systrap needs no nested virtualization, so it runs on every VM host.
+  platform = "systrap"

@@ -76,6 +76,19 @@ if [ "$kind" = knd ] || [ "$kind" = knc ] || [ "$kind" = nst ]; then
 fi
 if [ "$kind" = knd ] || [ "$kind" = knc ]; then
   command -v bpftool >/dev/null 2>&1 || fatal "bpftool was not installed"
+  log "checking gVisor installation"
+  for path in /usr/local/bin/runsc /usr/local/bin/containerd-shim-runsc-v1 /usr/local/bin/gvisor-bin/gvisor_sentry; do
+    [ -x "$path" ] || fatal "gVisor payload is incomplete: $path"
+  done
+  grep -Fq 'runtimes.runsc]' /etc/containerd/conf.d/gvisor.toml || fatal "runsc runtime handler is not configured"
+  grep -Fxq 'binary_name = "/usr/local/bin/runsc"' /etc/containerd/runsc.toml || fatal "runsc shim configuration is missing"
+fi
+if [ "$kind" = nst ]; then
+  log "checking gVisor absence"
+  for path in /usr/local/bin/runsc /usr/local/bin/containerd-shim-runsc-v1 /usr/local/bin/gvisor-bin /etc/containerd/runsc.toml; do
+    [ ! -e "$path" ] || fatal "nst install contains gVisor path: $path"
+  done
+  [ -z "$(ls -A /etc/containerd/conf.d 2>/dev/null)" ] || fatal "nst install contains containerd runtime drop-ins"
 fi
 if [ "$kind" = knd ] || [ "$kind" = knc ] || [ "$kind" = nst ]; then
   [ "$(stat -c '%a:%U:%G' /etc/kubernetes/manifests)" = 700:root:root ] || fatal "invalid static Pod manifest directory permissions"

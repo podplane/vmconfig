@@ -59,6 +59,9 @@ Docker/Podman for `make test-install` and `make test-integration`.
   into `/` on the target VM.
 - `templates/knc` overlays `templates/knd`; shared behavior belongs in `knd`
   unless it is control-plane-only.
+- gVisor is Kubernetes-node-only: keep its dependency, containerd drop-in, and
+  shim configuration scoped to `knd`/`knc`, never the shared
+  `container-runtime` template or `nst`.
 - Release artifacts are reproducible tarballs built by the Makefile with stable
   ownership, ordering, mtimes, and gzip headers.
 - Generated/transient outputs live under `dist/`, `temp/`, or `cache/` and

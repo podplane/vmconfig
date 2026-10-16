@@ -23,7 +23,7 @@
 #           BEFORE permissions.sh so chmod/chown drift can't false-positive)
 #        d. install non-`vmconfig` artifacts in safe order:
 #           i.)  debs first (uidmap provides getsubids needed by kubelet),
-#           ii.) then tar.gz extracts, then plain binaries
+#           ii.) then tar.gz and tar.bz2 extracts, then plain binaries
 #        e. mv vmconfig-manifest.json -> vmconfig-installed.json (in /opt/podplane/share/)
 #   3. (cleanup) if /opt/podplane/artifacts exists: rm -rf /opt/podplane/artifacts
 #   4. (permissions) invoke /opt/podplane/bin/permissions.sh "$kind"
@@ -92,7 +92,7 @@ if [ "$actual_manifest_sha256" != "$expected_manifest_sha256" ]; then
 fi
 
 # Load manifest shell script
-declare -a VMCONFIG_DEPENDENCIES_ALL=() VMCONFIG_DEPENDENCIES_DEB=() VMCONFIG_DEPENDENCIES_TAR_GZ=() VMCONFIG_DEPENDENCIES_BINARY=()
+declare -a VMCONFIG_DEPENDENCIES_ALL=() VMCONFIG_DEPENDENCIES_DEB=() VMCONFIG_DEPENDENCIES_TAR_GZ=() VMCONFIG_DEPENDENCIES_TAR_BZ2=() VMCONFIG_DEPENDENCIES_BINARY=()
 # shellcheck source=/dev/null
 source "$VMCONFIG_MANIFEST_SH"
 
@@ -112,6 +112,7 @@ for dep in "${VMCONFIG_DEPENDENCIES_ALL[@]}"; do
     binary) src="${ARTIFACTS_DIR}/${name}" ;;
     deb)    src="${ARTIFACTS_DIR}/${name}.deb" ;;
     tar.gz) src="${ARTIFACTS_DIR}/${name}.tar.gz" ;;
+    tar.bz2) src="${ARTIFACTS_DIR}/${name}.tar.bz2" ;;
     *)      fatal "${name}: unsupported type '${type}'" ;;
   esac
   [ -n "$digest" ] || fatal "${name}: empty digest in manifest"
@@ -140,6 +141,8 @@ fi
 #                at startup; libsubid5/libpq5 are runtime libs.
 #   2. tar.gz  - containerd/crictl to /usr/local/bin per
 #                upstream docs; cni-plugins to /opt/cni/bin per CRI.
+#      tar.bz2 - the complete gVisor payload to /usr/local/bin, where
+#                runsc requires its gvisor-bin sidecars beside it.
 #   3. binary  - kubelet/kube-*/registry to /usr/bin; runc to
 #                /usr/local/sbin per upstream containerd docs.
 #
@@ -181,6 +184,21 @@ extract_tarball() { # <name>
   local src="${ARTIFACTS_DIR}/${name}.tar.gz"
   log "extracting tarball ${name}..."
   case "$name" in
+    gvisor)
+      # The only tar.bz2 artifact. The OS image has no bzip2 tool, but its
+      # cloud-init python3 reads bzip2 natively; the data filter rejects members
+      # that would escape the destination.
+      command -v python3 >/dev/null 2>&1 || fatal "python3 is required to extract gvisor.tar.bz2"
+      tmp=$(mktemp -d)
+      python3 -m tarfile --filter data -e "${ARTIFACTS_DIR}/gvisor.tar.bz2" "$tmp"
+      for member in runsc containerd-shim-runsc-v1 gvisor-bin; do
+        [ -e "$tmp/$member" ] || fatal "gvisor.tar.bz2 is missing ${member}"
+      done
+      install -m0755 -o root -g root "$tmp/runsc" "$tmp/containerd-shim-runsc-v1" /usr/local/bin/
+      cp -R "$tmp/gvisor-bin" /usr/local/bin/gvisor-bin
+      chown -R root:root /usr/local/bin/gvisor-bin
+      rm -rf "$tmp"
+      ;;
     containerd)  tar -xzf "$src" -C /usr/local bin/containerd bin/containerd-shim-runc-v2 bin/ctr ;;
     crictl)      tar -xzf "$src" -C /usr/local/bin crictl ;;
     netsy)       mkdir -p /opt/netsy/bin && tar -xzf "$src" -C /opt/netsy/bin netsy ;;
@@ -211,7 +229,7 @@ extract_tarball() { # <name>
 
 log "extracting tarballs..."
 tar_pids=()
-for name in "${VMCONFIG_DEPENDENCIES_TAR_GZ[@]}"; do
+for name in "${VMCONFIG_DEPENDENCIES_TAR_GZ[@]}" "${VMCONFIG_DEPENDENCIES_TAR_BZ2[@]}"; do
   # vmconfig is already extracted to / by user-data; tar --diff above
   # has confirmed it. Skip here so we don't clobber it.
   [ "$name" = "vmconfig" ] && continue

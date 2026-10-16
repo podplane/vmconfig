@@ -34,6 +34,7 @@ const (
 	DepTypeBinary DepType = "binary"
 	DepTypeDeb    DepType = "deb"
 	DepTypeTarGz  DepType = "tar.gz"
+	DepTypeTarBz2 DepType = "tar.bz2"
 	DepTypeQcow2  DepType = "qcow2"
 )
 
@@ -111,9 +112,13 @@ type CosignBundle struct {
 type DownloadGroup struct {
 	// GitHub repo for "latest release" version lookup.
 	Repo string
+	// Optional release tag prefix stripped to give the version, for repos
+	// whose tags do not use a "v" prefix (e.g. "release-").
+	TagPrefix string
 	// Fixed upstream version for artifacts tied to the pinned OS kernel.
 	Version string
-	// URL templates. Vars: $ARCH, $VERSION (without leading "v"), $FILE.
+	// URL templates. Vars: $ARCH, $MACHINE (uname -m spelling of $ARCH),
+	// $VERSION (without leading "v"), $FILE.
 	FileURL string
 	// Direct hash URL for non-apt groups (GitHub-released tarballs, sha256
 	// sidecars). Mutually exclusive with Apt.

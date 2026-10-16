@@ -62,6 +62,13 @@
         "digest": "sha256:276ac994957e11d01d0726ce4420597218a849d5691ebb0cfbd21af8961f8a20",
         "size": 56527594
       },
+      "gvisor": {
+        "version": "20261005.0",
+        "url": "https://storage.googleapis.com/gvisor/releases/release/20261005.0/aarch64/gvisor.tar.bz2",
+        "type": "tar.bz2",
+        "digest": "sha512:1bc58be6f881264ced1df8ff61db0205531abedcace005585ac5637c5c987831062b365f99f270ef0939849f130344b84e0f1a663294406f798b8f7c8cd326ac",
+        "size": 153910485
+      },
       "kube-apiserver": {
         "version": "1.37.1",
         "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kube-apiserver",

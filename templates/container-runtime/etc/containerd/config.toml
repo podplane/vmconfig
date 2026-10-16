@@ -1,4 +1,6 @@
 version = 3
+# Kind-specific runtime handlers, such as gVisor on Kubernetes nodes.
+imports = ["/etc/containerd/conf.d/*.toml"]
 oom_score = -999
 [plugins]
   [plugins."io.containerd.cri.v1.runtime"]

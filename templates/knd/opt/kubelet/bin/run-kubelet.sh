@@ -33,5 +33,15 @@ if [[ -n "${INSTANCE_PROVIDER_ID}" ]]; then
     args+=("--provider-id=${INSTANCE_PROVIDER_ID}")
 fi
 
+# Workloads default to gVisor, so a node that cannot start a gVisor sandbox
+# must not register and accept them. Use the platform set in
+# /etc/containerd/runsc.toml; runsc do runs a throwaway sandbox outside
+# containerd and Kubernetes cgroups.
+log "checking gVisor"
+if ! /usr/local/bin/runsc --platform=systrap --network=none --ignore-cgroups "do" /bin/true; then
+    log "gVisor sandbox check failed; not starting kubelet"
+    exit 1
+fi
+
 log "exec kubelet"
 exec /usr/bin/kubelet "${args[@]}"

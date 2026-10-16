@@ -74,6 +74,47 @@ The `test-install` is helpful but limited - every other script under [templates]
     - sync the locally built `dist/<kind>/` tree into the VM with `podplane local sync`, then re-run user-data or invoke `/opt/podplane/bin/install.sh`, `/opt/podplane/bin/configure.sh`, and `/opt/podplane/bin/restart.sh` manually as needed
     - this keeps the developer in control of when synced local/uncommitted vmconfig changes are installed, configured, and restarted
 
+## Container Runtimes
+
+| Kind | Runtimes |
+| --- | --- |
+| `knd`, `knc` | runc and [gVisor](https://gvisor.dev/) |
+| `nst` | runc only |
+| `nat` | none |
+
+containerd's default runtime is runc on every kind, so kubelet static Pods
+(such as tunnels) and API Pods that name no RuntimeClass run under runc. On
+`knd` and `knc`, `/etc/containerd/conf.d/gvisor.toml` adds the `runsc` handler
+used by the `gvisor` RuntimeClass. A managed cluster's admission policies, from
+`podplane/components`, default API Pods to that RuntimeClass; a bare cluster
+(`--components=none`) has no RuntimeClasses or runtime policies, so its Pods
+run under runc.
+
+Key differences from runc for Podplane's restricted Pod defaults, as of
+gVisor `release-20261005.0`:
+
+- A Pod's seccomp profile, including `RuntimeDefault`, is not loaded inside
+  the sandbox (runsc's `--oci-seccomp` is off). Application system calls are
+  handled by gVisor's kernel, which itself runs under a fixed host seccomp
+  filter.
+- Capabilities, user IDs, `no_new_privs` (`allowPrivilegeEscalation: false`),
+  and read-only root filesystems are enforced by gVisor's kernel.
+- AppArmor and SELinux options do not apply inside the sandbox.
+- Host networking does not work: a `hostNetwork` Pod's listeners are
+  unreachable. Host ports (`hostPort`) work.
+- Host Unix sockets are unavailable in both directions, `/dev/kmsg` cannot be
+  read, and bidirectional mount propagation is refused, so components such as
+  CNI and CSI node plugins need runc.
+- Reads see changes made outside the sandbox to host paths, ConfigMaps,
+  Secrets, and projected volumes, but no inotify events are delivered for
+  them. Software must poll to notice rotated certificates or configuration.
+- Containers in a Pod see separate views of an emptyDir, so a Unix socket one
+  container binds there is invisible to the others. Annotate the Pod with gVisor
+  mount hints, which containerd forwards to runsc, to share the volume:
+  `dev.gvisor.spec.mount.<volume>.share: pod` and
+  `dev.gvisor.spec.mount.<volume>.type: tmpfs`.
+- Kubelet's Pod cgroup limits apply to the sandbox.
+
 ## Dependency Trust
 
 Per-source verification chain used by `update-manifests`:
@@ -96,7 +137,7 @@ Per-source verification chain used by `update-manifests`:
 - __Container images__:
     Registry content digests; publisher signatures are not verified.
 
-- __runc, registry, cri-tools, cni-plugins, Debian OS image__:
+- __runc, gVisor, registry, cri-tools, cni-plugins, Debian OS image__:
     TLS + sidecar checksum only - their available signing layouts are not currently verified by the manifest updater
 
 ## Learn More

@@ -186,9 +186,13 @@ func (p *progressReader) Read(buf []byte) (int, error) {
 	return n, err
 }
 
+// machines maps Debian architecture names to their uname -m spelling.
+var machines = map[string]string{ArchAmd64: "x86_64", ArchArm64: "aarch64"}
+
 func renderTemplate(tmpl string, arch, version, file string) string {
 	r := strings.NewReplacer(
 		"$ARCH", arch,
+		"$MACHINE", machines[arch],
 		"$VERSION", strings.TrimPrefix(version, "v"),
 		"$FILE", file,
 	)
@@ -335,7 +339,7 @@ func cacheFileExt(urlString string) string {
 		name = strings.TrimRight(name, "/")
 		name = name[strings.LastIndex(name, "/")+1:]
 	}
-	for _, ext := range []string{".tar.gz", ".qcow2", ".tgz", ".deb", ".zip", ".gz"} {
+	for _, ext := range []string{".tar.gz", ".tar.bz2", ".qcow2", ".tgz", ".deb", ".zip", ".gz"} {
 		if strings.HasSuffix(name, ext) {
 			return ext
 		}
@@ -1230,7 +1234,7 @@ func processGroup(groupName string, group DownloadGroup) error {
 		if err != nil {
 			return err
 		}
-		sharedVersion = v
+		sharedVersion = strings.TrimPrefix(v, group.TagPrefix)
 		if groupName == "containerd" {
 			if err := verifyContainerdSandboxImage(sharedVersion); err != nil {
 				return err

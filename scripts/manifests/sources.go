@@ -25,6 +25,8 @@
 //   - runc        : GPG .asc per-file, maintainer keys — NO cosign artifacts.
 //     Falls back to TLS+sha256sum until upstream adopts cosign or
 //     we add the maintainer keys to vmconfig/trust/.
+//   - gvisor: SHA-512 sidecars on Google Cloud Storage; no signatures.
+//     TLS+sha512 only.
 //   - registry: SHA-512 release checksums sidecar. The checksum file has a
 //     cosign bundle, but the archives do not have per-artifact signatures.
 //   - nstance: signed SHA-512 release checksums (GitHub Actions OIDC).
@@ -129,6 +131,18 @@ var sources = Sources{
 			HashAlg:      "sha256",
 			Type:         DepTypeBinary,
 			Files:        []FileEntry{{Name: "runc", Kind: containerRuntimeKinds}},
+		},
+		"gvisor": {
+			// The complete release payload: runsc, its containerd shim, and the
+			// gvisor-bin sidecars runsc requires beside it. Kubernetes nodes only;
+			// nst keeps runc for its trusted host-integrated static Pods.
+			Repo:      "google/gvisor",
+			TagPrefix: "release-",
+			FileURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.bz2",
+			HashURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.bz2.sha512",
+			HashAlg:   "sha512",
+			Type:      DepTypeTarBz2,
+			Files:     []FileEntry{{Name: "gvisor", Kind: kubernetesNodeKinds, Requires: []string{"containerd"}}},
 		},
 		"containerd": {
 			Repo:    "containerd/containerd",

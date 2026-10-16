@@ -62,6 +62,13 @@
         "digest": "sha256:1de781c9d79828fc40c5738fed5478645d011062fd4680465643bd08a9ddabf2",
         "size": 59007730
       },
+      "gvisor": {
+        "version": "20261005.0",
+        "url": "https://storage.googleapis.com/gvisor/releases/release/20261005.0/x86_64/gvisor.tar.bz2",
+        "type": "tar.bz2",
+        "digest": "sha512:79869ae9a589355a46d46fdac068d9a954e741741ffe77c64e38c56ea955498c1cb04e9bce44e1cce5155333e6b76bee72347c6661bb7c78fd2fe3aad198c8fe",
+        "size": 166822039
+      },
       "kubelet": {
         "version": "1.37.1",
         "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/amd64/kubelet",

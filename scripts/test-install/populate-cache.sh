@@ -94,6 +94,7 @@ while IFS=$'\t' read -r name type digest url; do
     binary) ext="" ;;
     deb)    ext=".deb" ;;
     tar.gz) ext=".tar.gz" ;;
+    tar.bz2) ext=".tar.bz2" ;;
     *) echo "unsupported type '$type' for dep '$name'" >&2; exit 1 ;;
   esac
   dest="$CACHE_DIR/${name}${ext}"
