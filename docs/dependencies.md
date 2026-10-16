@@ -17,6 +17,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `kube-apiserver` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kube-controller-manager` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kube-scheduler` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
+| `kube2iam` | [podplane/kube2iam-binaries](https://github.com/podplane/kube2iam-binaries) | — |
 | `kubectl` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
 | `netsy` | [netsy-dev/netsy](https://github.com/netsy-dev/netsy) | — |
@@ -34,6 +35,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `crictl` | [kubernetes-sigs/cri-tools](https://github.com/kubernetes-sigs/cri-tools) | — |
 | `fluent-bit` | [packages.fluentbit.io](https://packages.fluentbit.io/debian/trixie/dists/trixie) | `libpq5` |
 | `gvisor` | [google/gvisor](https://github.com/google/gvisor) | `containerd`, `runc` |
+| `kube2iam` | [podplane/kube2iam-binaries](https://github.com/podplane/kube2iam-binaries) | — |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
 | `nstance-agent` | [nstance-dev/nstance](https://github.com/nstance-dev/nstance) | — |
 | `registry` | [podplane/registry](https://github.com/podplane/registry) | — |

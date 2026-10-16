@@ -29,26 +29,24 @@ jq -r --arg manifest_sha256 "$manifest_sha256" '
     "VMCONFIG_KIND=\($vm.kind | shell_quote)",
     "VMCONFIG_URL=\($vm.dependencies.vmconfig.url // "" | shell_quote)",
     "VMCONFIG_DIGEST=\($vm.dependencies.vmconfig.digest // "" | shell_quote)",
+    "VMCONFIG_REQUIRES_PROVIDER=\(any($vm.dependencies[]; (.providers // [] | length) > 0))",
     "",
-    "VMCONFIG_DEPENDENCIES_ALL=(",
-    ($vm.dependencies | to_entries[] | "  \(([.key, .value.type, (.value.digest // "")] | @tsv) | shell_quote)"),
-    ")",
-    "",
-    "VMCONFIG_DEPENDENCIES_DEB=(",
-    ($vm.dependencies | to_entries[] | select(.value.type == "deb") | "  \(.key | shell_quote)"),
-    ")",
-    "",
-    "VMCONFIG_DEPENDENCIES_TAR_GZ=(",
-    ($vm.dependencies | to_entries[] | select(.value.type == "tar.gz") | "  \(.key | shell_quote)"),
-    ")",
-    "",
-    "VMCONFIG_DEPENDENCIES_TAR_BZ2=(",
-    ($vm.dependencies | to_entries[] | select(.value.type == "tar.bz2") | "  \(.key | shell_quote)"),
-    ")",
-    "",
-    "VMCONFIG_DEPENDENCIES_BINARY=(",
-    ($vm.dependencies | to_entries[] | select(.value.type == "binary") | "  \(.key | shell_quote)"),
-    ")"
+    "# Provider selection applies to both checksum verification and installation.",
+    "VMCONFIG_DEPENDENCIES_ALL=()",
+    "VMCONFIG_DEPENDENCIES_DEB=()",
+    "VMCONFIG_DEPENDENCIES_TAR_GZ=()",
+    "VMCONFIG_DEPENDENCIES_TAR_BZ2=()",
+    "VMCONFIG_DEPENDENCIES_BINARY=()",
+    ($vm.dependencies | to_entries[] |
+      (.value.providers // []) as $providers |
+      if ($providers | length) > 0 then
+        "case \"${PROVIDER_KIND:-}\" in \($providers | map(shell_quote) | join("|")))"
+      else empty end,
+      "VMCONFIG_DEPENDENCIES_ALL+=(\(([.key, .value.type, (.value.digest // "")] | @tsv) | shell_quote))",
+      (.value.type as $type |
+        {"deb": "DEB", "tar.gz": "TAR_GZ", "tar.bz2": "TAR_BZ2", "binary": "BINARY"}[$type] as $array |
+        if $array then "VMCONFIG_DEPENDENCIES_\($array)+=(\(.key | shell_quote))" else empty end),
+      if ($providers | length) > 0 then ";; esac" else empty end)
   ] | .[]
 ' "$manifest" > "$output"
 

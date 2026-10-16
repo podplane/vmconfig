@@ -63,10 +63,17 @@ echo "[run] building image $IMAGE_TAG..."
 # stays in the build cache and `docker run` fails with "access denied".
 docker build --load -t "$IMAGE_TAG" "$SCRIPT_DIR"
 
-echo "[run] running install.sh in container..."
-docker run --rm \
-  -v "$CACHE_DIR:/var/cache/vmconfig-deps:ro" \
-  -v "$PKG_TARBALL:/tmp/vmconfig-pkg.tar.gz:ro" \
-  "$IMAGE_TAG"
+providers=(local)
+if [ "$KIND" = knd ] || [ "$KIND" = knc ]; then
+  providers+=(aws)
+fi
+for provider in "${providers[@]}"; do
+  echo "[run] running install.sh in container for $provider..."
+  docker run --rm \
+    -e TEST_PROVIDER_KIND="$provider" \
+    -v "$CACHE_DIR:/var/cache/vmconfig-deps:ro" \
+    -v "$PKG_TARBALL:/tmp/vmconfig-pkg.tar.gz:ro" \
+    "$IMAGE_TAG"
+done
 
 echo "[run] test-install $KIND/$ARCH passed."

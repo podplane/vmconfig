@@ -69,6 +69,16 @@
         "digest": "sha512:1bc58be6f881264ced1df8ff61db0205531abedcace005585ac5637c5c987831062b365f99f270ef0939849f130344b84e0f1a663294406f798b8f7c8cd326ac",
         "size": 153910485
       },
+      "kube2iam": {
+        "version": "0.15.0",
+        "url": "https://github.com/podplane/kube2iam-binaries/releases/download/0.15.0/kube2iam_0.15.0_linux_arm64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:2d891837991c0063ade8cc981480b67cc6876dcd828a68d85f4be4e5c1a942eb63b6a5b835717d37181e341e34c18b817e56eea4eff567a3d0a23395bd9d3c24",
+        "size": 9050524,
+        "providers": [
+          "aws"
+        ]
+      },
       "kubelet": {
         "version": "1.37.1",
         "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/arm64/kubelet",

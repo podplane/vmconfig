@@ -11,7 +11,10 @@
 # renamed to vmconfig-installed.json and /opt/podplane/artifacts is removed.
 #
 # This script does NOT require the /opt/podplane/etc/user-data.env file
-# used by the configure.sh script.
+# used by the configure.sh script, and never reads it.
+# If the manifest contains provider-specific artifacts, the caller must supply
+# PROVIDER_KIND explicitly, for both image baking and first-boot installation:
+#   PROVIDER_KIND=aws /opt/podplane/bin/install.sh
 #
 # Flow:
 #   1. (preflight) checks
@@ -95,6 +98,14 @@ fi
 declare -a VMCONFIG_DEPENDENCIES_ALL=() VMCONFIG_DEPENDENCIES_DEB=() VMCONFIG_DEPENDENCIES_TAR_GZ=() VMCONFIG_DEPENDENCIES_TAR_BZ2=() VMCONFIG_DEPENDENCIES_BINARY=()
 # shellcheck source=/dev/null
 source "$VMCONFIG_MANIFEST_SH"
+
+# Require a target provider so provider-specific dependencies aren't silently skipped.
+if [ "$VMCONFIG_REQUIRES_PROVIDER" = true ]; then
+  case "${PROVIDER_KIND:-}" in
+    local|aws|google|proxmox) ;;
+    *) fatal "PROVIDER_KIND must be one of: local, aws, google, proxmox (pass it explicitly to install.sh)" ;;
+  esac
+fi
 
 # 2. install -----------------------------------------------------------------
 
@@ -201,6 +212,7 @@ extract_tarball() { # <name>
       ;;
     containerd)  tar -xzf "$src" -C /usr/local bin/containerd bin/containerd-shim-runc-v2 bin/ctr ;;
     crictl)      tar -xzf "$src" -C /usr/local/bin crictl ;;
+    kube2iam)    mkdir -p /opt/kube2iam/bin && tar -xzf "$src" -C /opt/kube2iam/bin kube2iam ;;
     netsy)       mkdir -p /opt/netsy/bin && tar -xzf "$src" -C /opt/netsy/bin netsy ;;
     nstance-agent) mkdir -p /opt/nstance-agent/bin && tar -xzf "$src" -C /opt/nstance-agent/bin nstance-agent ;;
     nstance-server) mkdir -p /opt/nstance-server/bin && tar -xzf "$src" -C /opt/nstance-server/bin nstance-server ;;

@@ -30,8 +30,9 @@
 //   - registry: SHA-512 release checksums sidecar. The checksum file has a
 //     cosign bundle, but the archives do not have per-artifact signatures.
 //   - nstance: signed SHA-512 release checksums (GitHub Actions OIDC).
+//   - kube2iam: signed SHA-512 checksums from podplane/kube2iam-binaries.
 //   - netsy: release checksum sidecars.
-//   - cri-tools, cni-plugins, kube2iam: no consistent upstream signature scheme.
+//   - cri-tools, cni-plugins: no consistent upstream signature scheme.
 //     TLS-only where release artifacts are available.
 //   - debian cloud image: no detached signature published by Debian Cloud Team.
 //     TLS-only via cloud.debian.org HTTPS.
@@ -232,6 +233,20 @@ var sources = Sources{
 			HashAlg: "sha256",
 			Type:    DepTypeDeb,
 			Files:   []FileEntry{{Name: "fluent-bit", Kind: allKinds, Requires: []string{"libpq5"}}},
+		},
+		"kube2iam": {
+			Repo:         "podplane/kube2iam-binaries",
+			FileURL:      "https://github.com/podplane/kube2iam-binaries/releases/download/$VERSION/kube2iam_$VERSION_linux_$ARCH.tar.gz",
+			HashURL:      "https://github.com/podplane/kube2iam-binaries/releases/download/$VERSION/kube2iam_$VERSION_checksums.txt",
+			HashFilename: "kube2iam_$VERSION_linux_$ARCH.tar.gz",
+			HashAlg:      "sha512",
+			Type:         DepTypeTarGz,
+			HashCosignBundle: &CosignBundle{
+				BundleURL:     "https://github.com/podplane/kube2iam-binaries/releases/download/$VERSION/kube2iam_$VERSION_checksums.txt.bundle",
+				ExpectIssuer:  "https://token.actions.githubusercontent.com",
+				ExpectSubject: "https://github.com/podplane/kube2iam-binaries/.github/workflows/release.yml@refs/heads/main",
+			},
+			Files: []FileEntry{{Name: "kube2iam", Kind: kubernetesNodeKinds, Providers: []string{"aws"}}},
 		},
 		"netsy": {
 			Repo:         "netsy-dev/netsy",

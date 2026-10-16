@@ -7,11 +7,58 @@ package main
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+// TestInstallPlanProviders verifies provider selection covers both verification
+// and every install format, while provider-neutral dependencies always remain.
+func TestInstallPlanProviders(t *testing.T) {
+	dir := t.TempDir()
+	manifest, plan := filepath.Join(dir, "manifest.json"), filepath.Join(dir, "manifest.sh")
+	fixture := `{"vmconfig":{"kind":"knd","dependencies":{
+		"common":{"type":"binary","digest":"sha256:common"},
+		"deb":{"type":"deb","digest":"sha256:deb","providers":["aws"]},
+		"gzip":{"type":"tar.gz","digest":"sha256:gzip","providers":["aws"]},
+		"bzip":{"type":"tar.bz2","digest":"sha256:bzip","providers":["aws"]},
+		"binary":{"type":"binary","digest":"sha256:binary","providers":["aws","google"]}
+	}}}`
+	if err := os.WriteFile(manifest, []byte(fixture), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("bash", "../manifests.sh", manifest, plan).CombinedOutput(); err != nil {
+		t.Fatalf("render install plan: %v\n%s", err, out)
+	}
+	for _, test := range []struct {
+		provider, want string
+	}{
+		{"aws", "common deb gzip bzip binary \ndeb\ngzip\nbzip\ncommon binary\n"},
+		{"google", "common binary \n\n\n\ncommon binary\n"},
+		{"local", "common \n\n\n\ncommon\n"},
+		{"proxmox", "common \n\n\n\ncommon\n"},
+		{"", "common \n\n\n\ncommon\n"},
+	} {
+		t.Run("provider="+test.provider, func(t *testing.T) {
+			cmd := exec.Command("bash", "-c", `
+set -euo pipefail
+PROVIDER_KIND="$2"
+source "$1"
+for dep in "${VMCONFIG_DEPENDENCIES_ALL[@]}"; do
+  IFS=$'\t' read -r name type digest <<< "$dep"
+  printf '%s ' "$name"
+done
+printf '\n%s\n%s\n%s\n%s\n' "${VMCONFIG_DEPENDENCIES_DEB[*]}" "${VMCONFIG_DEPENDENCIES_TAR_GZ[*]}" "${VMCONFIG_DEPENDENCIES_TAR_BZ2[*]}" "${VMCONFIG_DEPENDENCIES_BINARY[*]}"
+`, "bash", plan, test.provider)
+			out, err := cmd.CombinedOutput()
+			if err != nil || string(out) != test.want {
+				t.Fatalf("install plan: %v\ngot  %q\nwant %q", err, out, test.want)
+			}
+		})
+	}
+}
 
 // TestValidateDependencyGraph verifies invalid references, kind coverage, and
 // cycles are rejected.

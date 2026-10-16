@@ -43,6 +43,34 @@ cp -a "$DEPS_CACHE"/. "$ARTIFACTS_DIR"/
 # so install.sh's `tar --diff` check passes.
 cp -a "$PKG_TARBALL" "$ARTIFACTS_DIR/vmconfig.tar.gz"
 
+# Baking and cloud-init both pass the target provider explicitly. AWS tests
+# have no runtime configuration; local tests include conflicting runtime data
+# to prove install.sh does not read it.
+provider="${TEST_PROVIDER_KIND:-local}"
+if [ "$provider" != aws ]; then
+  rm -f "$ARTIFACTS_DIR/kube2iam.tar.gz"
+  mkdir -p /opt/podplane/etc
+  printf "PROVIDER_KIND='aws'\n" > /opt/podplane/etc/user-data.env
+fi
+
+if [ "$kind" = knd ] || [ "$kind" = knc ]; then
+  for invalid_provider in '' awss; do
+    log "checking rejection of missing or invalid install provider"
+    if PROVIDER_KIND="$invalid_provider" "$INSTALL_SCRIPT" >/tmp/install-rejected.log 2>&1; then
+      fatal "install succeeded without a valid explicit provider"
+    fi
+    grep -Fq 'PROVIDER_KIND must be one of:' /tmp/install-rejected.log || {
+      cat /tmp/install-rejected.log
+      fatal "install failed for a reason other than provider validation"
+    }
+    [ -f /opt/podplane/share/vmconfig-manifest.json ] || fatal "rejected install consumed manifest"
+    [ ! -e /opt/podplane/share/vmconfig-installed.json ] || fatal "rejected install recorded completion"
+    [ ! -e /opt/kube2iam/bin/kube2iam ] || fatal "rejected install extracted kube2iam"
+    [ ! -e /usr/bin/kubelet ] || fatal "rejected install installed shared binaries"
+    [ -d "$ARTIFACTS_DIR" ] || fatal "rejected install removed artifacts"
+  done
+fi
+
 # Docker shares the host kernel, while Jool modules intentionally target the
 # Debian guest kernel. Override only uname -r so install.sh can verify the
 # packaged module metadata in this container-only smoke test.
@@ -66,7 +94,19 @@ EOF
 fi
 
 log "running install.sh (first invocation)"
-"$INSTALL_SCRIPT"
+if [ "$kind" = knd ] || [ "$kind" = knc ]; then
+  PROVIDER_KIND="$provider" "$INSTALL_SCRIPT"
+else
+  # Provider-neutral manifests still work without an explicit provider.
+  env -u PROVIDER_KIND "$INSTALL_SCRIPT"
+fi
+
+if { [ "$kind" = knd ] || [ "$kind" = knc ]; } && [ "$provider" = aws ]; then
+  [ -x /opt/kube2iam/bin/kube2iam ] || fatal "kube2iam binary was not installed on AWS"
+  /opt/kube2iam/bin/kube2iam --help >/dev/null 2>&1 || fatal "kube2iam binary cannot run"
+else
+  [ ! -e /opt/kube2iam/bin/kube2iam ] || fatal "kube2iam binary installed outside AWS Kubernetes nodes"
+fi
 
 if [ "$kind" = knd ] || [ "$kind" = knc ] || [ "$kind" = nst ]; then
   log "checking registry installation"

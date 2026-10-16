@@ -90,6 +90,16 @@
         "digest": "sha256:8d10dfc64de70b1670cc1ce52701eb6a219c0905a95bdde608edc5432f9eca43",
         "size": 51077282
       },
+      "kube2iam": {
+        "version": "0.15.0",
+        "url": "https://github.com/podplane/kube2iam-binaries/releases/download/0.15.0/kube2iam_0.15.0_linux_amd64.tar.gz",
+        "type": "tar.gz",
+        "digest": "sha512:5e8db6f9ce7e78413e05620108b6c7f3eeab888f41091420d2208ba923e191f3e919e0cd7096b04d02700ba22d0a07df40a8bdafad005636c5cb3b7090aa590b",
+        "size": 10299030,
+        "providers": [
+          "aws"
+        ]
+      },
       "kubectl": {
         "version": "1.37.1",
         "url": "https://dl.k8s.io/release/v1.37.1/bin/linux/amd64/kubectl",

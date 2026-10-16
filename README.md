@@ -21,9 +21,9 @@ The full list of dependencies per VM kind, OS, and architecture is published as 
 ## Requirements
 
 VMs are responsible for:
-  1. Placing all dependencies into `/opt/podplane/artifacts/` using the `<key>.<ext>` naming convention (e.g. `vmconfig.tar.gz`, `containerd.tar.gz`, `fluent-bit.deb`, `kubelet`, `runc`)
+  1. Placing all dependencies applicable to the target provider into `/opt/podplane/artifacts/` using the `<key>.<ext>` naming convention (e.g. `vmconfig.tar.gz`, `containerd.tar.gz`, `fluent-bit.deb`, `kubelet`, `runc`)
   2. Extracting `/opt/podplane/artifacts/vmconfig.tar.gz` to `/` (paths inside the tarball are relative to the system root, so this also lands `/opt/podplane/share/vmconfig-manifest.json`)
-  3. Invoking `/opt/podplane/bin/install.sh` (verifies + installs artifacts, can be used for preparing machine images)
+  3. Invoking `PROVIDER_KIND=aws /opt/podplane/bin/install.sh` with the target provider (`aws`, `google`, `proxmox`, or `local`); this verifies + installs artifacts and can be used for preparing machine images
   4. (Optional) Writing any vmconfig runtime settings/environment variables to `/opt/podplane/etc/user-data.env`
   5. (Optional) Writing any sensitive bootstrap files required by individual services (e.g. `/opt/nstance-agent/identity/nonce.jwt`)
   6. (Optional, `knd`/`knc`) Supplying tunnel settings via nstance-agent
@@ -31,6 +31,8 @@ VMs are responsible for:
   8. Invoking `/opt/podplane/bin/restart.sh` (idempotent per-boot service (re)start)
 
 Note that the outcome of 1, 2, & 3 can be bundled into a machine image (e.g. an AMI on AWS).
+
+`install.sh` never reads `user-data.env`: the provider is an explicit installation input, not instance configuration. If the manifest contains provider-specific dependencies, a missing or invalid `PROVIDER_KIND` fails before any artifacts are installed or installation is recorded as complete. Use the same target provider when baking an image and when launching VMs from it. Instance configuration and service startup remain the responsibility of `configure.sh` and `restart.sh` at boot.
 
 Kubelet runs tunnel static Pods: vmconfig configures one tunnel on `knd`/`knc` from Nstance-delivered files; the Nstance tunnel supervisor manages wake tunnels on `nst`.
 
@@ -71,7 +73,7 @@ The `test-install` is helpful but limited - every other script under [templates]
   - vmconfig development VMs use a local development vmconfig manifest:
     - run `podplane deps download --vmconfig manifests/<kind>.<os-name>.<arch>.json` so the CLI caches the local manifest (for 7 days)
     - the checked-in dev manifest has an unreleased `vmconfig` dependency stub, so local VM user-data downloads the non-vmconfig dependencies without downloading/extracting a published vmconfig package
-    - sync the locally built `dist/<kind>/` tree into the VM with `podplane local sync`, then re-run user-data or invoke `/opt/podplane/bin/install.sh`, `/opt/podplane/bin/configure.sh`, and `/opt/podplane/bin/restart.sh` manually as needed
+    - sync the locally built `dist/<kind>/` tree into the VM with `podplane local sync`, then re-run user-data or invoke `PROVIDER_KIND=local /opt/podplane/bin/install.sh`, `/opt/podplane/bin/configure.sh`, and `/opt/podplane/bin/restart.sh` manually as needed
     - this keeps the developer in control of when synced local/uncommitted vmconfig changes are installed, configured, and restarted
 
 ## Container Runtimes
