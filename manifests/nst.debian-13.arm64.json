@@ -70,11 +70,11 @@
         "size": 218504
       },
       "nstance-server": {
-        "version": "2.1.2",
-        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.1.2/nstance-server_2.1.2_linux_arm64.tar.gz",
+        "version": "2.2.0",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.2.0/nstance-server_2.2.0_linux_arm64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:e3e73e430abe96f0ad5bf6969b7af6b9a0e5b75e446b8d2451990abbd42733b28e9ed5b1add1d86cf865e540b2f7d695885465cbe4e52003db8e8655a1a82439",
-        "size": 29033103
+        "digest": "sha512:af8bd04f12ac6341599d3e73c67e7464e753ddedb64af4a4df104889300a596e48f9a6ac341423ec71773ea35d74fd087ebc2bbd6a07bca4a0cf06833117bdda",
+        "size": 29034662
       },
       "registry": {
         "version": "0.1.0",

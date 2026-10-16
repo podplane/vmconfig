@@ -140,11 +140,11 @@
         "size": 15591221
       },
       "nstance-agent": {
-        "version": "2.1.2",
-        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.1.2/nstance-agent_2.1.2_linux_amd64.tar.gz",
+        "version": "2.2.0",
+        "url": "https://github.com/nstance-dev/nstance/releases/download/v2.2.0/nstance-agent_2.2.0_linux_amd64.tar.gz",
         "type": "tar.gz",
-        "digest": "sha512:326d32f32659dbcf92c96c5abadcb96a9eef4e5756648aa1f88ee70c20dba8f51db3d3303bb08acc8a22e22810e2bd7010145b2b6323f22826d28352f31f9bfc",
-        "size": 6105420
+        "digest": "sha512:db86eeca638d002c48907d715102a6022b25c17cb8ff33b659147f35d539da14c9fa6da54980cafe11db6c0f225bf44d742ac093c839930a2ef06dd21ed0a801",
+        "size": 6105426
       },
       "registry": {
         "version": "0.1.0",
