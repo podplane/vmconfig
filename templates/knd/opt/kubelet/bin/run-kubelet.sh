@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eo pipefail
 
 log() { printf '[run-kubelet] %s\tts=%s\n' "$*" "$EPOCHREALTIME"; }
 
@@ -36,9 +36,11 @@ fi
 # Workloads default to gVisor, so a node that cannot start a gVisor sandbox
 # must not register and accept them. Use the platform set in
 # /etc/containerd/runsc.toml; runsc do runs a throwaway sandbox outside
-# containerd and Kubernetes cgroups.
+# containerd and Kubernetes cgroups, and we pipe output so runsc cannot shut
+# down the inherited journald socket on exit. `set pipefail` preserves probe 
+# failures rather than reporting cat's exit status.
 log "checking gVisor"
-if ! /usr/local/bin/runsc --platform=systrap --network=none --ignore-cgroups "do" /bin/true; then
+if ! /usr/local/bin/runsc --platform=systrap --network=none --ignore-cgroups "do" /bin/true 2>&1 | cat; then
     log "gVisor sandbox check failed; not starting kubelet"
     exit 1
 fi
