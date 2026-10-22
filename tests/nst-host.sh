@@ -64,9 +64,9 @@ cp "$PODPLANE_ROOT/opt/podplane/etc/mutable.env" "$tmp/before.env"
 bash "$PODPLANE_ROOT/opt/podplane/bin/bootstrap.sh"
 cmp "$tmp/before.env" "$PODPLANE_ROOT/opt/podplane/etc/mutable.env"
 
-printf "INSTANCE_PROVIDER_ID='gce://example-project/us-central1-a/123456789'\n" >> "$PODPLANE_ROOT/opt/podplane/etc/detected.env"
+printf "INSTANCE_PROVIDER_ID='gce://example-project/us-central1-a/nst-example-0'\n" >> "$PODPLANE_ROOT/opt/podplane/etc/detected.env"
 bash "$PODPLANE_ROOT/opt/podplane/lib/configure/nstance-server.sh"
-grep -Fxq "NSTANCE_SERVER_ID='123456789'" "$PODPLANE_ROOT/opt/env/nstance-server.env"
+grep -Fxq "NSTANCE_SERVER_ID='nst-example-0'" "$PODPLANE_ROOT/opt/env/nstance-server.env"
 
 # Agent-managed nodes must still start from defaults rather than preserve overrides.
 rm "$PODPLANE_ROOT/opt/podplane/bootstrap.done"

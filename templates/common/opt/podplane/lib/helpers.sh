@@ -125,11 +125,20 @@ derive_instance_provider_id() {
       printf 'aws:///%s/%s\n' "$az" "$id"
       ;;
     google)
-      local pid zone id
-      pid=$(cloud_init_query v1.project_id v1.project-id) || fatal "cloud-init missing Google project ID"
-      zone=$(cloud_init_query v1.zone) || fatal "cloud-init missing Google zone"
-      id=$(cloud_init_query v1.instance_id v1.instance-id) || fatal "cloud-init missing Google instance ID"
-      printf 'gce://%s/%s/%s\n' "$pid" "$zone" "$id"
+      # cloud-init's GCE datasource exposes neither the project ID nor the
+      # instance name, and Kubernetes and Nstance identify GCE instances by name.
+      google_metadata() { # <path>
+        curl -fsS --retry 5 --retry-connrefused --max-time 5 -H 'Metadata-Flavor: Google' \
+          "http://metadata.google.internal/computeMetadata/v1/$1"
+      }
+      local pid zone name
+      pid="${GOOGLE_PROJECT_ID:-}"
+      if [ -z "$pid" ]; then
+        pid=$(google_metadata project/project-id) || fatal "cannot read Google project ID from metadata server"
+      fi
+      zone=$(cloud_init_query v1.availability_zone v1.availability-zone) || fatal "cloud-init missing Google zone"
+      name=$(google_metadata instance/name) || fatal "cannot read Google instance name from metadata server"
+      printf 'gce://%s/%s/%s\n' "$pid" "$zone" "$name"
       ;;
     *)
       cat "${PODPLANE_ROOT:-}/var/lib/cloud/data/instance-id"
