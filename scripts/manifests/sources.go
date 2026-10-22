@@ -46,7 +46,7 @@ const (
 )
 
 // debianPackage returns a verified Debian package dependency.
-func debianPackage(name, pool string, kinds []string, requires ...string) DownloadGroup {
+func debianPackage(name, pool string, kinds []string, providers []string, requires ...string) DownloadGroup {
 	return DownloadGroup{
 		FileURL: "https://deb.debian.org/debian/" + pool + "/$FILE_$VERSION_$ARCH.deb",
 		Apt: &AptSource{
@@ -58,8 +58,15 @@ func debianPackage(name, pool string, kinds []string, requires ...string) Downlo
 		},
 		HashAlg: "sha256",
 		Type:    DepTypeDeb,
-		Files:   []FileEntry{{Name: name, Kind: kinds, Requires: requires}},
+		Files:   []FileEntry{{Name: name, Kind: kinds, Providers: providers, Requires: requires}},
 	}
+}
+
+// localLVM bundles the verified host tools only on local Kubernetes nodes.
+func localLVM(name string, requires ...string) DownloadGroup {
+	group := debianPackage(name, "pool/main/l/lvm2", kubernetesNodeKinds, []string{"local"}, requires...)
+	group.Apt.VersionEpochPrefix = "2:"
+	return group
 }
 
 // sources is the single blueprint consumed by main.go.
@@ -71,6 +78,10 @@ var sources = Sources{
 		ImageBasename: "debian-13-genericcloud",
 	},
 	Dependencies: map[string]DownloadGroup{
+		"lvm2":                     localLVM("lvm2", "dmeventd", "libdevmapper-event1.02.1"),
+		"dmeventd":                 localLVM("dmeventd", "liblvm2cmd2.03", "libdevmapper-event1.02.1"),
+		"liblvm2cmd2.03":           localLVM("liblvm2cmd2.03", "dmeventd", "libdevmapper-event1.02.1"),
+		"libdevmapper-event1.02.1": localLVM("libdevmapper-event1.02.1"),
 		"jool-modules": {
 			Version:      joolVersion,
 			FileURL:      "https://github.com/podplane/jool-builds/releases/download/jool-4.1.15-kernel-6.12.107%2Bdeb13/jool-4.1.15-6.12.107%2Bdeb13-$ARCH.tar.gz",
@@ -85,19 +96,19 @@ var sources = Sources{
 			},
 			Files: []FileEntry{{Name: "jool-modules", Kind: []string{KindNat}}},
 		},
-		"jool-tools":       debianPackage("jool-tools", "pool/main/j/jool", []string{KindNat}, "libnl-3-200", "libnl-genl-3-200"),
-		"libedit2":         debianPackage("libedit2", "pool/main/libe/libedit", []string{KindNat}),
-		"libjansson4":      debianPackage("libjansson4", "pool/main/j/jansson", []string{KindNat}),
-		"libmnl0":          debianPackage("libmnl0", "pool/main/libm/libmnl", []string{KindNat}),
-		"libnftables1":     debianPackage("libnftables1", "pool/main/n/nftables", []string{KindNat}, "libjansson4", "libmnl0", "libnftnl11", "libxtables12"),
-		"libnftnl11":       debianPackage("libnftnl11", "pool/main/libn/libnftnl", []string{KindNat}, "libmnl0"),
-		"libnl-3-200":      debianPackage("libnl-3-200", "pool/main/libn/libnl3", []string{KindNat}),
-		"libnl-genl-3-200": debianPackage("libnl-genl-3-200", "pool/main/libn/libnl3", []string{KindNat}, "libnl-3-200"),
-		"libxtables12":     debianPackage("libxtables12", "pool/main/i/iptables", []string{KindNat}),
-		"nftables":         debianPackage("nftables", "pool/main/n/nftables", []string{KindNat}, "libedit2", "libnftables1"),
-		"libcap2":          debianPackage("libcap2", "pool/main/libc/libcap2", kubernetesNodeKinds),
-		"libelf1t64":       debianPackage("libelf1t64", "pool/main/e/elfutils", kubernetesNodeKinds, "zlib1g"),
-		"zlib1g":           debianPackage("zlib1g", "pool/main/z/zlib", kubernetesNodeKinds),
+		"jool-tools":       debianPackage("jool-tools", "pool/main/j/jool", []string{KindNat}, nil, "libnl-3-200", "libnl-genl-3-200"),
+		"libedit2":         debianPackage("libedit2", "pool/main/libe/libedit", []string{KindNat}, nil),
+		"libjansson4":      debianPackage("libjansson4", "pool/main/j/jansson", []string{KindNat}, nil),
+		"libmnl0":          debianPackage("libmnl0", "pool/main/libm/libmnl", []string{KindNat}, nil),
+		"libnftables1":     debianPackage("libnftables1", "pool/main/n/nftables", []string{KindNat}, nil, "libjansson4", "libmnl0", "libnftnl11", "libxtables12"),
+		"libnftnl11":       debianPackage("libnftnl11", "pool/main/libn/libnftnl", []string{KindNat}, nil, "libmnl0"),
+		"libnl-3-200":      debianPackage("libnl-3-200", "pool/main/libn/libnl3", []string{KindNat}, nil),
+		"libnl-genl-3-200": debianPackage("libnl-genl-3-200", "pool/main/libn/libnl3", []string{KindNat}, nil, "libnl-3-200"),
+		"libxtables12":     debianPackage("libxtables12", "pool/main/i/iptables", []string{KindNat}, nil),
+		"nftables":         debianPackage("nftables", "pool/main/n/nftables", []string{KindNat}, nil, "libedit2", "libnftables1"),
+		"libcap2":          debianPackage("libcap2", "pool/main/libc/libcap2", kubernetesNodeKinds, nil),
+		"libelf1t64":       debianPackage("libelf1t64", "pool/main/e/elfutils", kubernetesNodeKinds, nil, "zlib1g"),
+		"zlib1g":           debianPackage("zlib1g", "pool/main/z/zlib", kubernetesNodeKinds, nil),
 		"kubernetes": {
 			Repo:    "kubernetes/kubernetes",
 			FileURL: "https://dl.k8s.io/release/v$VERSION/bin/linux/$ARCH/$FILE",

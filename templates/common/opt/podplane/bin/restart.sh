@@ -140,6 +140,16 @@ if [ "$VMCONFIG_KIND" = knd ] || [ "$VMCONFIG_KIND" = knc ]; then
     disable_units+=(kube2iam)
     stop_units+=(kube2iam)
   fi
+  if lvm_enabled; then
+    # Boot-only: never restart LVM alongside a running kubelet/CSI plugin.
+    enable_units+=(podplane-lvm.service)
+    if ! systemctl is-active --quiet kubelet.service; then
+      start_units+=(podplane-lvm.service)
+    fi
+  else
+    disable_units+=(podplane-lvm.service)
+    stop_units+=(podplane-lvm.service)
+  fi
 fi
 
 log "restarting systemd services..."

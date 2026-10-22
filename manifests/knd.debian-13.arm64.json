@@ -55,6 +55,16 @@
         "digest": "sha256:c9dfdf9ebc353a0027c88622206a5e90ee6f0e78cfabf1a9ef4dc575298fd555",
         "size": 17809380
       },
+      "dmeventd": {
+        "version": "1.02.205-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/dmeventd_1.02.205-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:41f97c55cd32c750a9d0c5d02a0fb659ab47a2933a72ecd4d3359effa53aae34",
+        "size": 59920,
+        "providers": [
+          "local"
+        ]
+      },
       "fluent-bit": {
         "version": "5.0.5",
         "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.0.5_arm64.deb",
@@ -93,12 +103,32 @@
         "digest": "sha256:863aa5b9cdf6f80010b48982d4639126b09a89eeef2c0c5c7be226297c811581",
         "size": 28568
       },
+      "libdevmapper-event1.02.1": {
+        "version": "1.02.205-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/libdevmapper-event1.02.1_1.02.205-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:36c3f1b4d85d20c7cfd0ce57c457dd84dd54a1f09a84026daba6b00fcae3d951",
+        "size": 13052,
+        "providers": [
+          "local"
+        ]
+      },
       "libelf1t64": {
         "version": "0.192-4",
         "url": "https://deb.debian.org/debian/pool/main/e/elfutils/libelf1t64_0.192-4_arm64.deb",
         "type": "deb",
         "digest": "sha256:815b4265c7d6c89c5bbad456bdeed7af893da6912c9d16cf4c581001927c0e37",
         "size": 189080
+      },
+      "liblvm2cmd2.03": {
+        "version": "2.03.31-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/liblvm2cmd2.03_2.03.31-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:a5f38d128a8a88796cf3ed548f7fd8007b96ed8283e3ab6269e9a66aa6c33792",
+        "size": 666568,
+        "providers": [
+          "local"
+        ]
       },
       "libpq5": {
         "version": "17.11-0+deb13u1",
@@ -113,6 +143,16 @@
         "type": "deb",
         "digest": "sha256:0cbd234e3e1afad8195cf12d87c7eb820a3e55b252e48da930cd9f0df3e787c1",
         "size": 218504
+      },
+      "lvm2": {
+        "version": "2.03.31-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/lvm2_2.03.31-2_arm64.deb",
+        "type": "deb",
+        "digest": "sha256:8a41280dd1c58185c671ac29f1a6684195f8447c03c73d8b18014a238d8912e7",
+        "size": 1168472,
+        "providers": [
+          "local"
+        ]
       },
       "nstance-agent": {
         "version": "2.2.0",

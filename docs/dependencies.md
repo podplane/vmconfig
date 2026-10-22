@@ -20,6 +20,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `kube2iam` | [podplane/kube2iam-binaries](https://github.com/podplane/kube2iam-binaries) | — |
 | `kubectl` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | — |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
+| `lvm2` | [deb.debian.org](https://deb.debian.org/debian/dists/trixie) | `dmeventd`, `libdevmapper-event1.02.1`, `liblvm2cmd2.03` |
 | `netsy` | [netsy-dev/netsy](https://github.com/netsy-dev/netsy) | — |
 | `nstance-agent` | [nstance-dev/nstance](https://github.com/nstance-dev/nstance) | — |
 | `registry` | [podplane/registry](https://github.com/podplane/registry) | — |
@@ -37,6 +38,7 @@ This file shows which dependencies vmconfig bundles for each type of VM, where t
 | `gvisor` | [google/gvisor](https://github.com/google/gvisor) | `containerd`, `runc` |
 | `kube2iam` | [podplane/kube2iam-binaries](https://github.com/podplane/kube2iam-binaries) | — |
 | `kubelet` | [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes) | `containerd`, `libsubid5`, `runc`, `uidmap` |
+| `lvm2` | [deb.debian.org](https://deb.debian.org/debian/dists/trixie) | `dmeventd`, `libdevmapper-event1.02.1`, `liblvm2cmd2.03` |
 | `nstance-agent` | [nstance-dev/nstance](https://github.com/nstance-dev/nstance) | — |
 | `registry` | [podplane/registry](https://github.com/podplane/registry) | — |
 | `runc` | [opencontainers/runc](https://github.com/opencontainers/runc) | — |

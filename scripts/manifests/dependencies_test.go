@@ -60,8 +60,8 @@ printf '\n%s\n%s\n%s\n%s\n' "${VMCONFIG_DEPENDENCIES_DEB[*]}" "${VMCONFIG_DEPEND
 	}
 }
 
-// TestValidateDependencyGraph verifies invalid references, kind coverage, and
-// cycles are rejected.
+// TestValidateDependencyGraph permits cycles only within a single deb batch
+// and rejects invalid references and kind coverage.
 func TestValidateDependencyGraph(t *testing.T) {
 	tests := []struct {
 		name string
@@ -89,6 +89,39 @@ func TestValidateDependencyGraph(t *testing.T) {
 			},
 			want: "dependency cycle",
 		},
+		{
+			name: "deb batch cycle",
+			deps: map[string]DownloadGroup{
+				"a": {Type: DepTypeDeb, Files: []FileEntry{{Name: "a", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"b"}}}},
+				"b": {Type: DepTypeDeb, Files: []FileEntry{{Name: "b", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"a"}}}},
+			},
+		},
+		{
+			name: "mixed package cycle",
+			deps: map[string]DownloadGroup{
+				"a": {Type: DepTypeDeb, Files: []FileEntry{{Name: "a", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"b"}}}},
+				"b": {Type: DepTypeBinary, Files: []FileEntry{{Name: "b", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"c"}}}},
+				"c": {Type: DepTypeDeb, Files: []FileEntry{{Name: "c", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"a"}}}},
+			},
+			want: "dependency cycle",
+		},
+		{
+			name: "different provider cycle",
+			deps: map[string]DownloadGroup{
+				"a": {Type: DepTypeDeb, Files: []FileEntry{{Name: "a", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"b"}}}},
+				"b": {Type: DepTypeDeb, Files: []FileEntry{{Name: "b", Kind: []string{KindKnd}, Providers: []string{"aws"}, Requires: []string{"a"}}}},
+			},
+			want: "dependency cycle",
+		},
+		{
+			name: "overlapping cycles with different providers",
+			deps: map[string]DownloadGroup{
+				"a": {Type: DepTypeDeb, Files: []FileEntry{{Name: "a", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"b"}}}},
+				"b": {Type: DepTypeDeb, Files: []FileEntry{{Name: "b", Kind: []string{KindKnd}, Providers: []string{"local"}, Requires: []string{"a", "c"}}}},
+				"c": {Type: DepTypeDeb, Files: []FileEntry{{Name: "c", Kind: []string{KindKnd}, Providers: []string{"aws"}, Requires: []string{"a"}}}},
+			},
+			want: "dependency cycle",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -96,6 +129,12 @@ func TestValidateDependencyGraph(t *testing.T) {
 			sources.Dependencies = test.deps
 			defer func() { sources.Dependencies = original }()
 			err := validateDependencyGraph()
+			if test.want == "" {
+				if err != nil {
+					t.Fatalf("validateDependencyGraph() error = %v, want a valid deb batch", err)
+				}
+				return
+			}
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("validateDependencyGraph() error = %v, want containing %q", err, test.want)
 			}
@@ -231,5 +270,29 @@ func TestImagesOnlyScope(t *testing.T) {
 	}
 	if !reflect.DeepEqual(sources.Dependencies, originalSources.Dependencies) {
 		t.Fatal("images-only changed the dependency catalogue")
+	}
+}
+
+// TestLVMInstallProviders checks local-only selection in the shipped manifests.
+func TestLVMInstallProviders(t *testing.T) {
+	for _, kind := range kubernetesNodeKinds {
+		for _, arch := range Archs {
+			plan := filepath.Join(t.TempDir(), "plan.sh")
+			manifest := "../../manifests/" + kind + ".debian-13." + arch + ".json"
+			if out, err := exec.Command("bash", "../manifests.sh", manifest, plan).CombinedOutput(); err != nil {
+				t.Fatalf("render: %v %s", err, out)
+			}
+			for _, provider := range []string{"local", "aws", "google", "proxmox"} {
+				out, err := exec.Command("bash", "-c", `PROVIDER_KIND="$2"; source "$1"; printf '%s\n' "${VMCONFIG_DEPENDENCIES_ALL[@]}" "${VMCONFIG_DEPENDENCIES_DEB[@]}"`, "bash", plan, provider).CombinedOutput()
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, name := range []string{"lvm2", "dmeventd", "liblvm2cmd2.03", "libdevmapper-event1.02.1"} {
+					if strings.Contains(string(out), name) != (provider == "local") {
+						t.Fatalf("%s/%s/%s: incorrect selection of %s", kind, arch, provider, name)
+					}
+				}
+			}
+		}
 	}
 }

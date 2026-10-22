@@ -131,6 +131,11 @@ case "$VMCONFIG_KIND" in
       "${CONFIGURE_COMPONENT_DIR}/registry.sh"
     fi
     "${CONFIGURE_COMPONENT_DIR}/kube2iam.sh"
+    if lvm_enabled; then
+      "${CONFIGURE_COMPONENT_DIR}/lvm.sh"
+    else
+      rm -f "${PODPLANE_ROOT:-}/etc/modules-load.d/podplane-lvm.conf"
+    fi
     "${CONFIGURE_COMPONENT_DIR}/kube.sh"
     "${CONFIGURE_COMPONENT_DIR}/tunnels.sh"
     if nstance_counters_enabled; then

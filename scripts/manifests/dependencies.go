@@ -60,27 +60,35 @@ func validateDependencyGraph() error {
 		}
 	}
 
-	state := make(map[string]uint8)
-	var visit func(string, []string) error
-	visit = func(name string, path []string) error {
-		switch state[name] {
-		case 1:
-			return fmt.Errorf("dependency cycle: %s", strings.Join(append(path, name), " -> "))
-		case 2:
-			return nil
+	// An edge belongs to a cycle exactly when its target can reach its source.
+	// Check every such edge, including overlapping cycles, for one dpkg batch.
+	var reaches func(string, string, map[string]bool) bool
+	reaches = func(from, to string, seen map[string]bool) bool {
+		if from == to {
+			return true
 		}
-		state[name] = 1
-		for _, required := range entries[name].File.Requires {
-			if err := visit(required, append(path, name)); err != nil {
-				return err
+		if seen[from] {
+			return false
+		}
+		seen[from] = true
+		for _, required := range entries[from].File.Requires {
+			if reaches(required, to, seen) {
+				return true
 			}
 		}
-		state[name] = 2
-		return nil
+		return false
 	}
-	for name := range entries {
-		if err := visit(name, nil); err != nil {
-			return err
+	for name, entry := range entries {
+		for _, required := range entry.File.Requires {
+			target := entries[required]
+			if entry.Group.Type == DepTypeDeb && target.Group.Type == DepTypeDeb &&
+				slices.Equal(entry.File.Kind, target.File.Kind) &&
+				slices.Equal(entry.File.Providers, target.File.Providers) {
+				continue
+			}
+			if reaches(required, name, make(map[string]bool)) {
+				return fmt.Errorf("dependency cycle: %s -> %s is not in the same dpkg batch", name, required)
+			}
 		}
 	}
 	return nil

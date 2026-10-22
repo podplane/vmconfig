@@ -55,6 +55,16 @@
         "digest": "sha256:67c983ee8a6bbce73d39a186e633c5fe4f8a70e62171ac3bd92a9c1b2c601670",
         "size": 19539425
       },
+      "dmeventd": {
+        "version": "1.02.205-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/dmeventd_1.02.205-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:51420462b13fb95b88f084580c8f7f4482b4f59fcc60bd7ad883c6789d61fbcf",
+        "size": 62400,
+        "providers": [
+          "local"
+        ]
+      },
       "fluent-bit": {
         "version": "5.0.5",
         "url": "https://packages.fluentbit.io/debian/trixie/pool/main/f/fluent-bit/fluent-bit_5.0.5_amd64.deb",
@@ -121,12 +131,32 @@
         "digest": "sha256:89fc4d34fc7a28ad6f0fcd0c561ab253b9dedf6f77f5a000b47c276c8295bf67",
         "size": 28988
       },
+      "libdevmapper-event1.02.1": {
+        "version": "1.02.205-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/libdevmapper-event1.02.1_1.02.205-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:f6af1ffe41ee3c291626b4ebdeda1e90075a7217788b1c2f76fe200cc3e3280a",
+        "size": 13648,
+        "providers": [
+          "local"
+        ]
+      },
       "libelf1t64": {
         "version": "0.192-4",
         "url": "https://deb.debian.org/debian/pool/main/e/elfutils/libelf1t64_0.192-4_amd64.deb",
         "type": "deb",
         "digest": "sha256:94497b7e17b6f574a0605b380d454e20d3f01a9c63b70c2a2263f679d30053e1",
         "size": 189408
+      },
+      "liblvm2cmd2.03": {
+        "version": "2.03.31-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/liblvm2cmd2.03_2.03.31-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:a1a5c3ddf09c22038503b975a6f9625d3e41535599c473db7fc98a09f40fc4ea",
+        "size": 784696,
+        "providers": [
+          "local"
+        ]
       },
       "libpq5": {
         "version": "17.11-0+deb13u1",
@@ -141,6 +171,16 @@
         "type": "deb",
         "digest": "sha256:4d4faef8143c117a055a9041a7e99f8ba014c420a9b6e2fef5c693482581a204",
         "size": 222488
+      },
+      "lvm2": {
+        "version": "2.03.31-2",
+        "url": "https://deb.debian.org/debian/pool/main/l/lvm2/lvm2_2.03.31-2_amd64.deb",
+        "type": "deb",
+        "digest": "sha256:a6a130eae69ec2ede92b2bf4bfab35208a5340c2c3e2dcb4453bf8fbf742d0a6",
+        "size": 1287460,
+        "providers": [
+          "local"
+        ]
       },
       "netsy": {
         "version": "1.1.1",

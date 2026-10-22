@@ -47,3 +47,8 @@ kube_scheduler_enabled() {
 kube2iam_enabled() {
   [ "${PROVIDER_KIND:-}" = "aws" ]
 }
+
+# lvm_enabled returns true only for local nodes.
+lvm_enabled() {
+  [ "${PROVIDER_KIND:-}" = "local" ]
+}
