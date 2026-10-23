@@ -339,7 +339,7 @@ func cacheFileExt(urlString string) string {
 		name = strings.TrimRight(name, "/")
 		name = name[strings.LastIndex(name, "/")+1:]
 	}
-	for _, ext := range []string{".tar.gz", ".tar.bz2", ".qcow2", ".tgz", ".deb", ".zip", ".gz"} {
+	for _, ext := range []string{".tar.gz", ".tar.zstd", ".qcow2", ".tgz", ".deb", ".zip", ".gz"} {
 		if strings.HasSuffix(name, ext) {
 			return ext
 		}

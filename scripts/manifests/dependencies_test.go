@@ -23,7 +23,7 @@ func TestInstallPlanProviders(t *testing.T) {
 		"common":{"type":"binary","digest":"sha256:common"},
 		"deb":{"type":"deb","digest":"sha256:deb","providers":["aws"]},
 		"gzip":{"type":"tar.gz","digest":"sha256:gzip","providers":["aws"]},
-		"bzip":{"type":"tar.bz2","digest":"sha256:bzip","providers":["aws"]},
+		"zstd":{"type":"tar.zstd","digest":"sha256:zstd","providers":["aws"]},
 		"binary":{"type":"binary","digest":"sha256:binary","providers":["aws","google"]}
 	}}}`
 	if err := os.WriteFile(manifest, []byte(fixture), 0o600); err != nil {
@@ -35,7 +35,7 @@ func TestInstallPlanProviders(t *testing.T) {
 	for _, test := range []struct {
 		provider, want string
 	}{
-		{"aws", "common deb gzip bzip binary \ndeb\ngzip\nbzip\ncommon binary\n"},
+		{"aws", "common deb gzip zstd binary \ndeb\ngzip\nzstd\ncommon binary\n"},
 		{"google", "common binary \n\n\n\ncommon binary\n"},
 		{"local", "common \n\n\n\ncommon\n"},
 		{"proxmox", "common \n\n\n\ncommon\n"},
@@ -50,7 +50,7 @@ for dep in "${VMCONFIG_DEPENDENCIES_ALL[@]}"; do
   IFS=$'\t' read -r name type digest <<< "$dep"
   printf '%s ' "$name"
 done
-printf '\n%s\n%s\n%s\n%s\n' "${VMCONFIG_DEPENDENCIES_DEB[*]}" "${VMCONFIG_DEPENDENCIES_TAR_GZ[*]}" "${VMCONFIG_DEPENDENCIES_TAR_BZ2[*]}" "${VMCONFIG_DEPENDENCIES_BINARY[*]}"
+printf '\n%s\n%s\n%s\n%s\n' "${VMCONFIG_DEPENDENCIES_DEB[*]}" "${VMCONFIG_DEPENDENCIES_TAR_GZ[*]}" "${VMCONFIG_DEPENDENCIES_TAR_ZSTD[*]}" "${VMCONFIG_DEPENDENCIES_BINARY[*]}"
 `, "bash", plan, test.provider)
 			out, err := cmd.CombinedOutput()
 			if err != nil || string(out) != test.want {

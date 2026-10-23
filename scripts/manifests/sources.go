@@ -150,10 +150,10 @@ var sources = Sources{
 			// nst keeps runc for its trusted host-integrated static Pods.
 			Repo:      "google/gvisor",
 			TagPrefix: "release-",
-			FileURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.bz2",
-			HashURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.bz2.sha512",
+			FileURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.zstd",
+			HashURL:   "https://storage.googleapis.com/gvisor/releases/release/$VERSION/$MACHINE/gvisor.tar.zstd.sha512",
 			HashAlg:   "sha512",
-			Type:      DepTypeTarBz2,
+			Type:      DepTypeTarZstd,
 			Files:     []FileEntry{{Name: "gvisor", Kind: kubernetesNodeKinds, Requires: []string{"containerd"}}},
 		},
 		"containerd": {

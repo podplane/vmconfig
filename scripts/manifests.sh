@@ -35,7 +35,7 @@ jq -r --arg manifest_sha256 "$manifest_sha256" '
     "VMCONFIG_DEPENDENCIES_ALL=()",
     "VMCONFIG_DEPENDENCIES_DEB=()",
     "VMCONFIG_DEPENDENCIES_TAR_GZ=()",
-    "VMCONFIG_DEPENDENCIES_TAR_BZ2=()",
+    "VMCONFIG_DEPENDENCIES_TAR_ZSTD=()",
     "VMCONFIG_DEPENDENCIES_BINARY=()",
     ($vm.dependencies | to_entries[] |
       (.value.providers // []) as $providers |
@@ -44,7 +44,7 @@ jq -r --arg manifest_sha256 "$manifest_sha256" '
       else empty end,
       "VMCONFIG_DEPENDENCIES_ALL+=(\(([.key, .value.type, (.value.digest // "")] | @tsv) | shell_quote))",
       (.value.type as $type |
-        {"deb": "DEB", "tar.gz": "TAR_GZ", "tar.bz2": "TAR_BZ2", "binary": "BINARY"}[$type] as $array |
+        {"deb": "DEB", "tar.gz": "TAR_GZ", "tar.zstd": "TAR_ZSTD", "binary": "BINARY"}[$type] as $array |
         if $array then "VMCONFIG_DEPENDENCIES_\($array)+=(\(.key | shell_quote))" else empty end),
       if ($providers | length) > 0 then ";; esac" else empty end)
   ] | .[]

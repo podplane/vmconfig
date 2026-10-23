@@ -31,11 +31,11 @@ var nstanceAgentKinds = []string{KindKnc, KindKnd, KindNat}
 type DepType string
 
 const (
-	DepTypeBinary DepType = "binary"
-	DepTypeDeb    DepType = "deb"
-	DepTypeTarGz  DepType = "tar.gz"
-	DepTypeTarBz2 DepType = "tar.bz2"
-	DepTypeQcow2  DepType = "qcow2"
+	DepTypeBinary  DepType = "binary"
+	DepTypeDeb     DepType = "deb"
+	DepTypeTarGz   DepType = "tar.gz"
+	DepTypeTarZstd DepType = "tar.zstd"
+	DepTypeQcow2   DepType = "qcow2"
 )
 
 // ----- catalogue (input) -----

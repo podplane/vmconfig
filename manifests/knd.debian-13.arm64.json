@@ -74,10 +74,10 @@
       },
       "gvisor": {
         "version": "20261005.0",
-        "url": "https://storage.googleapis.com/gvisor/releases/release/20261005.0/aarch64/gvisor.tar.bz2",
-        "type": "tar.bz2",
-        "digest": "sha512:1bc58be6f881264ced1df8ff61db0205531abedcace005585ac5637c5c987831062b365f99f270ef0939849f130344b84e0f1a663294406f798b8f7c8cd326ac",
-        "size": 153910485
+        "url": "https://storage.googleapis.com/gvisor/releases/release/20261005.0/aarch64/gvisor.tar.zstd",
+        "type": "tar.zstd",
+        "digest": "sha512:cb1c1ac7616f1f0e2287d39660aa9a65f1d81b866c7fa29457f78da62373baadda2d55aa96a200743dfe56193e43d2b6256af23a23d41d0b49a49b4971982435",
+        "size": 120770227
       },
       "kube2iam": {
         "version": "0.15.0",
