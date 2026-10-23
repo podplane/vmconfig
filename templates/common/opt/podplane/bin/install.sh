@@ -158,7 +158,8 @@ fi
 #                /usr/local/sbin per upstream containerd docs.
 #
 # policy-rc.d blocks dpkg postinst from starting services; configure.sh
-# owns service lifecycle. The trap guarantees cleanup on failure.
+# owns service lifecycle. update-initramfs.conf skips initramfs rebuilds. The
+# trap guarantees cleanup on failure.
 
 log "installing debs..."
 # Batch into a single `dpkg -i` so dpkg resolves inter-deb deps for us
@@ -171,22 +172,34 @@ if [ "${#VMCONFIG_DEPENDENCIES_DEB[@]}" -gt 0 ]; then
   # temporarily modify policy-rc.d to block dpkg postinst from starting services
   policy_rc="/usr/sbin/policy-rc.d"
   policy_rc_backup="${policy_rc}.podplane-bak"
-  restore_policy_rc() {
+  # Temporarily disable `update-initramfs -u` triggers. lvm2 ships an
+  # initramfs hook, but the root disk is not on LVM and podplane-lvm.service
+  # activates the data volume group after boot, so a ~2s rebuild is wasted.
+  initramfs_conf="/etc/initramfs-tools/update-initramfs.conf"
+  initramfs_conf_backup="${initramfs_conf}.podplane-bak"
+  restore_dpkg_overrides() {
     rm -f "$policy_rc"
     if [ -e "$policy_rc_backup" ]; then
       mv "$policy_rc_backup" "$policy_rc"
+    fi
+    if [ -e "$initramfs_conf_backup" ]; then
+      mv "$initramfs_conf_backup" "$initramfs_conf"
     fi
   }
   if [ -e "$policy_rc" ]; then
     mv "$policy_rc" "$policy_rc_backup"
   fi
-  trap restore_policy_rc EXIT
+  trap restore_dpkg_overrides EXIT
   printf '#!/bin/sh\nexit 101\n' > "$policy_rc"
   chmod 0755 "$policy_rc"
+  if [ -e "$initramfs_conf" ]; then
+    cp -p "$initramfs_conf" "$initramfs_conf_backup"
+    echo "update_initramfs=no" >> "$initramfs_conf"
+  fi
   # install all debs via dpkg
   DEBIAN_FRONTEND=noninteractive dpkg -i "${debs[@]}"
-  # restore original policy-rd.d
-  restore_policy_rc
+  # restore original policy-rc.d and update-initramfs.conf
+  restore_dpkg_overrides
   trap - EXIT
 fi
 
