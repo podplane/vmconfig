@@ -45,7 +45,8 @@ jq -r --arg manifest_sha256 "$manifest_sha256" '
       "VMCONFIG_DEPENDENCIES_ALL+=(\(([.key, .value.type, (.value.digest // "")] | @tsv) | shell_quote))",
       (.value.type as $type |
         {"deb": "DEB", "tar.gz": "TAR_GZ", "tar.zstd": "TAR_ZSTD", "binary": "BINARY"}[$type] as $array |
-        if $array then "VMCONFIG_DEPENDENCIES_\($array)+=(\(.key | shell_quote))" else empty end),
+        if $array then "VMCONFIG_DEPENDENCIES_\($array)+=(\(.key | shell_quote))"
+        else error("\(.key): unsupported dependency type \($type | tojson)") end),
       if ($providers | length) > 0 then ";; esac" else empty end)
   ] | .[]
 ' "$manifest" > "$output"

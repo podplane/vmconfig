@@ -90,14 +90,9 @@ log "cache dir: $CACHE_DIR"
 while IFS=$'\t' read -r name type digest url; do
   # vmconfig is staged from the locally-built package tarball at run time.
   [ "$name" = "vmconfig" ] && continue
-  case "$type" in
-    binary) ext="" ;;
-    deb)    ext=".deb" ;;
-    tar.gz) ext=".tar.gz" ;;
-    tar.zstd) ext=".tar.zstd" ;;
-    *) echo "unsupported type '$type' for dep '$name'" >&2; exit 1 ;;
-  esac
-  dest="$CACHE_DIR/${name}${ext}"
+  # Same <name>.<type> naming as podplane's user-data; binaries stay bare.
+  dest="$CACHE_DIR/${name}.${type}"
+  [ "$type" = binary ] && dest="$CACHE_DIR/${name}"
   if [ -f "$dest" ] && verify "$dest" "$digest"; then
     log "$name: ok (cached)"
     continue

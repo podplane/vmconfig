@@ -112,20 +112,15 @@ fi
 log "installing vmconfig artifacts for instance kind=${VMCONFIG_KIND}"
 
 # Verify every dep's digest up front, so we fail before any partial
-# installation. Local filename is <key>.<ext>, with <ext> derived from
-# .type (binary = no extension). `sha*sum -c` reads "<hex>  <path>".
+# installation. podplane's user-data stages each dep as <key>.<type>, except
+# binaries, which keep a bare <key>. `sha*sum -c` reads "<hex>  <path>".
 log "verifying artifact checksums..."
 for dep in "${VMCONFIG_DEPENDENCIES_ALL[@]}"; do
   IFS=$'\t' read -r name type digest <<< "$dep"
   # vmconfig is verified by tar --diff below, not by checksum here.
   [ "$name" = "vmconfig" ] && continue
-  case "$type" in
-    binary) src="${ARTIFACTS_DIR}/${name}" ;;
-    deb)    src="${ARTIFACTS_DIR}/${name}.deb" ;;
-    tar.gz) src="${ARTIFACTS_DIR}/${name}.tar.gz" ;;
-    tar.zstd) src="${ARTIFACTS_DIR}/${name}.tar.zstd" ;;
-    *)      fatal "${name}: unsupported type '${type}'" ;;
-  esac
+  src="${ARTIFACTS_DIR}/${name}.${type}"
+  [ "$type" = binary ] && src="${ARTIFACTS_DIR}/${name}"
   [ -n "$digest" ] || fatal "${name}: empty digest in manifest"
   case "$digest" in
     sha256:*) echo "${digest#sha256:}  ${src}" | sha256sum -c --quiet ;;
